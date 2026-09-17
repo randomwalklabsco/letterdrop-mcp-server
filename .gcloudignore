@@ -1,0 +1,36 @@
+# Cloud Build upload: do NOT exclude package-lock.json (needed for npm ci).
+# Copy of .gitignore but without package-lock.json so the image build has the lockfile.
+node_modules/
+yarn.lock
+
+dist/
+*.tsbuildinfo
+
+.env
+.env.local
+.env.*.local
+
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+.DS_Store
+Thumbs.db
+
+coverage/
+.nyc_output/
+
+.cache/
+temp/
+tmp/
+
+.git
+.gitignore

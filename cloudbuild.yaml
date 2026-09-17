@@ -1,0 +1,70 @@
+# Google Cloud Build configuration for letterdrop-mcp-server
+# _IMAGE_TAG defaults to 'latest' so `gcloud builds submit` works without a repo.
+# For repo triggers, set substitution _IMAGE_TAG=$COMMIT_SHA to tag by commit.
+# _MCP_PUBLIC_URL must be set to the public origin this service is served on
+# (e.g. https://mcp.example.com); it is published in the OAuth metadata.
+substitutions:
+  _IMAGE_TAG: "latest"
+  _MCP_PUBLIC_URL: ""
+
+steps:
+  # Build the Docker image
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "build"
+      - "-t"
+      - "gcr.io/$PROJECT_ID/letterdrop-mcp-server:${_IMAGE_TAG}"
+      - "-t"
+      - "gcr.io/$PROJECT_ID/letterdrop-mcp-server:latest"
+      - "."
+
+  # Push the Docker image to Container Registry
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "push"
+      - "gcr.io/$PROJECT_ID/letterdrop-mcp-server:${_IMAGE_TAG}"
+
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "push"
+      - "gcr.io/$PROJECT_ID/letterdrop-mcp-server:latest"
+
+  # Deploy to Cloud Run
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: gcloud
+    args:
+      - "run"
+      - "deploy"
+      - "letterdrop-mcp-server"
+      - "--image"
+      - "gcr.io/$PROJECT_ID/letterdrop-mcp-server:${_IMAGE_TAG}"
+      - "--region"
+      - "us-central1"
+      - "--platform"
+      - "managed"
+      - "--allow-unauthenticated"
+      - "--memory"
+      - "512Mi"
+      - "--cpu"
+      - "1"
+      - "--min-instances"
+      - "0"
+      - "--max-instances"
+      - "10"
+      - "--port"
+      - "3000"
+      - "--timeout"
+      - "300"
+      - "--set-env-vars"
+      # MCP_PUBLIC_URL pins the origin this server publishes in its OAuth
+      # metadata. Without it the origin is derived from X-Forwarded-Host,
+      # which `trust proxy` makes caller-controlled.
+      - "NODE_ENV=production,MCP_SERVER_PORT=3000,MCP_PUBLIC_URL=${_MCP_PUBLIC_URL}"
+
+images:
+  - "gcr.io/$PROJECT_ID/letterdrop-mcp-server:${_IMAGE_TAG}"
+  - "gcr.io/$PROJECT_ID/letterdrop-mcp-server:latest"
+
+options:
+  machineType: "E2_HIGHCPU_8"
+  logging: CLOUD_LOGGING_ONLY
