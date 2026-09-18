@@ -96,7 +96,7 @@ export interface CompetitorMonitoringAccountContact {
   lastEngaged?: string | null;
   lastActivity?: string;
   isHistoricInitialConnection?: boolean;
-  /** Seniority classification of this ENGAGED person, NOT membership of buyingCommittee[]. */
+  /** Seniority classification of this person, NOT membership of buyingCommittee[]. */
   buyingCommitteeRole?: string;
   contacted?: boolean;
   replied?: boolean;
@@ -121,12 +121,12 @@ export interface CompetitorBuyingCommitteeContact {
   recommendedChannels?: CompetitorRecommendedChannels;
   /** Always "Buying Committee" here; the twin of the export's Contact Type column. */
   contactType?: string;
-  /** Always false: this person engaged nobody. */
+  /** Always false: this person produced no signal of their own. */
   hasOwnSignal?: boolean;
   /**
    * ACCOUNT context, not this person's behaviour. `competitors` is
-   * which competitor surfaced the account and `engagedWith` is the rep the
-   * account's ENGAGED contacts interacted with; both are repeated here for
+   * which competitor surfaced the account and `engagedWith` is the context
+   * behind the account's own signals; both are repeated here for
    * convenience and neither is something this person did.
    */
   competitors?: string[];

@@ -3,7 +3,7 @@
  *
  * The account-grouped view of the competitor monitoring table — one row per
  * company, mirroring what the in-app table renders. This is the tool to reach
- * for when the question is about a company: which competitors it engaged, how
+ * for when the question is about a company: which competitors are involved, how
  * urgent it is, what stage we think its cycle is in and why, what the CRM says
  * about the deal and our outreach, and who at the account produced the signal.
  *
@@ -70,7 +70,7 @@ const DEFAULT_TABLE_INCLUDES = [
 const DEFAULT_MAX_CONTACTS_PER_ACCOUNT = 100;
 
 const INCLUDE_DESCRIPTION =
-  'Optional: blocks to return. Defaults to the complete contact roster needed for table/CSV/report work: ["contacts","custom_columns","buying_committee"]. "engagements" adds each engaged contact\'s full engagement history and post bodies; "profile_details" adds about/role text and photos; "summary" adds the table\'s metric cards (add "summary_details" for the per-deal rows behind them); "filter_options" lists the available deal statuses, account owners and tracked competitors, plus customColumnOptions \u2014 the values each configured custom CRM column actually holds, keyed the same way as the custom_column_values filter. Keep "buying_committee" for any request involving all contacts, decision-makers, the full table, a CSV, or a report.';
+  'Optional: blocks to return. Defaults to the complete contact roster needed for table/CSV/report work: ["contacts","custom_columns","buying_committee"]. "engagements" adds each contact\'s full signal history and the source text behind it; "profile_details" adds role and biography text; "summary" adds the table\'s metric cards (add "summary_details" for the per-deal rows behind them); "filter_options" lists the available deal statuses, account owners and tracked competitors, plus customColumnOptions \u2014 the values each configured custom CRM column actually holds, keyed the same way as the custom_column_values filter. Keep "buying_committee" for any request involving all contacts, decision-makers, the full table, a CSV, or a report.';
 
 export const CompetitorMonitoringTableSchema = z.object({
   limit: z
@@ -97,7 +97,7 @@ export const CompetitorMonitoringTableSchema = z.object({
   competitors: z
     .array(z.string().min(1))
     .optional()
-    .describe("Optional: filter by the competitor(s) the account engaged"),
+    .describe("Optional: filter by the account's competitor(s)"),
   stages: z
     .array(z.enum(COMPETITOR_MONITORING_STAGES))
     .optional()
@@ -189,7 +189,7 @@ export const CompetitorMonitoringTableSchema = z.object({
     .max(100)
     .optional()
     .describe(
-      "Optional: cap the engaged contacts returned per account (default 100, max 100, 0 to omit them). contactCount always reports the true total."
+      "Optional: cap the contacts returned per account (default 100, max 100, 0 to omit them). contactCount always reports the true total."
     )
 });
 
@@ -254,7 +254,7 @@ export async function handleCompetitorMonitoringTable(
 export const competitorMonitoringTableTool = {
   name: "get_competitor_monitoring_table",
   description:
-    "Fetch the full competitor monitoring table: the single account-grained read behind every competitor-table, all-leads, decision-maker, CSV, export and recommended-outreach question. One row per company, with both contact groups by default — `contacts` are people who personally produced a competitor signal, `buyingCommittee` the extended decision-makers at the same account. There is no separate per-lead or 'Show buying committee' tool; the committee is part of this response unless `include` drops `buying_committee`. Each person carries `recommendedAction` and `recommendedChannels`, outreach guidance from the workspace's weekly capacity plan rather than an email address or a named sequence. Each account also carries the competitors it engaged, priority (high/medium/low/nurture), staleness, guessed stage and reasoning, CRM deal status / stage / amount / owner / open and close dates, outreach status and CRM summary, custom CRM columns, signal dates, and contacted/replied state. Supports free-text search, filters, sorting and limit-offset pagination: follow `pagination.hasMore` and `pagination.nextOffset` for the whole dataset, but start at limit 25 and narrow with filters rather than paging deeply, since each page is a full table read. `existingAccount` is null when the CRM lookup was unavailable, which is NOT the same as net-new. " +
+    "Fetch the full competitor monitoring table: the single account-grained read behind every competitor-table, all-leads, decision-maker, CSV, export and recommended-outreach question. One row per company, with both contact groups by default — `contacts` are the people the signals came from, `buyingCommittee` the wider decision-makers at the same account. There is no separate per-lead or 'Show buying committee' tool; the committee is part of this response unless `include` drops `buying_committee`. Each person carries `recommendedAction` and `recommendedChannels`, outreach guidance from the workspace's weekly capacity plan rather than an email address or a named sequence. Each account also carries its competitors, priority (high/medium/low/nurture), staleness, guessed stage and reasoning, CRM deal status / stage / amount / owner / open and close dates, outreach status and CRM summary, custom CRM columns, signal dates, and contacted/replied state. Supports free-text search, filters, sorting and limit-offset pagination: follow `pagination.hasMore` and `pagination.nextOffset` for the whole dataset, but start at limit 25 and narrow with filters rather than paging deeply, since each page is a full table read. `existingAccount` is null when the CRM lookup was unavailable, which is NOT the same as net-new. " +
     BUDGETED_RECOMMENDATION_NOTE +
     " " +
     GUESSED_STAGE_NOTE +
@@ -266,7 +266,7 @@ export const competitorMonitoringTableTool = {
     HISTORIC_CONNECTION_NOTE +
     " The same rule applies at the account level: an account with hasOnlyHistoricInitialConnections: true reports lastEngaged / firstEngaged as null and carries only collectedDate. " +
     BUYING_COMMITTEE_NOTE +
-    " Here the two groups arrive in separate arrays: `contacts` holds the engaged contacts, and `buyingCommittee` (only when `include` asks for it) holds the committee. " +
+    " Here the two groups arrive in separate arrays: `contacts` holds the contacts the signals came from, and `buyingCommittee` (only when `include` asks for it) holds the committee. " +
     BUYING_COMMITTEE_ABSENCE_NOTE +
     " The `coverage` block states whether both contact groups were included. " +
     CUSTOM_COLUMN_SYNC_NOTE +
@@ -293,7 +293,7 @@ export const competitorMonitoringTableTool = {
       max_contacts_per_account: {
         type: "number",
         description:
-          "Optional: cap the engaged contacts returned per account (default 100, max 100, 0 to omit them). contactCount always reports the true total."
+          "Optional: cap the contacts returned per account (default 100, max 100, 0 to omit them). contactCount always reports the true total."
       }
     },
     required: []

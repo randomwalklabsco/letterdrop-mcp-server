@@ -2,17 +2,17 @@
 
 A [Model Context Protocol](https://modelcontextprotocol.io) server for Letterdrop **competitor monitoring**. It lets an AI assistant find the accounts that are in a competitor's sales cycle, see who at those accounts is involved, and check what the CRM says about them.
 
-The server only reads. The one thing it can change is the workspace's buyer-filter definition. It cannot send messages from a connected account or create outreach sequences.
+The server only reads. The one thing it can change is the workspace's buyer-filter definition. It cannot contact anyone on the workspace's behalf or create outreach sequences.
 
 ## Tools
 
 | Tool                                        | Access | What it does                                                                                                                                                                                            |
 | ------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `get_competitor_monitoring_table`           | read   | The full competitor monitoring table, one row per company: engaged contacts, buying committee, recommended outreach, CRM deal fields, custom columns. Supports search, filters, sorting and pagination. |
+| `get_competitor_monitoring_table`           | read   | The full competitor monitoring table, one row per company: the contacts the signals came from, buying committee, recommended outreach, CRM deal fields, custom columns. Supports search, filters, sorting and pagination. |
 | `get_competitor_monitoring_account_details` | read   | Everything known about one company: CRM outreach rollup, activity timeline, competitor signals, opportunities and the buying committee.                                                                 |
 | `get_knowledge_base_buyer_filters`          | read   | The workspace's buyer definition: company filters, decision-maker titles, individual-contributor titles.                                                                                                |
 | `update_knowledge_base_buyer_filters`       | write  | Replaces that buyer definition. Needs the `mcp.write` scope.                                                                                                                                            |
-| `list_workspaces`                           | read   | The workspaces the connected user can see, with the active one flagged.                                                                                                                                 |
+| `list_workspaces`                           | read   | The workspaces this connector can see, with the active one flagged.                                                                                                                                 |
 
 The server also publishes one prompt and one resource (`letterdrop://guides/orchestration-playbook`) explaining how to use these tools together.
 

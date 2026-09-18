@@ -56,7 +56,7 @@ export const CompetitorMonitoringAccountDetailsSchema = z
       .array(z.enum(DETAIL_INCLUDES))
       .optional()
       .describe(
-        'Optional: which blocks to return. Defaults to all of them. "outreach" = the CRM rollup and per-contact outreach records; "activity" = the recent activity timeline with reply classification; "signals" = the competitor signals we surfaced; "opportunities" = live CRM deals; "buying_committee" = decision-makers found at the account beyond the people who engaged.'
+        'Optional: which blocks to return. Defaults to all of them. "outreach" = the CRM rollup and per-contact outreach records; "activity" = the recent activity timeline with reply classification; "signals" = the competitor signals we surfaced; "opportunities" = live CRM deals; "buying_committee" = decision-makers found at the account beyond the people the signals came from.'
       ),
     activity_limit: z
       .number()
@@ -109,11 +109,11 @@ export async function handleCompetitorMonitoringAccountDetails(
 export const competitorMonitoringAccountDetailsTool = {
   name: "get_competitor_monitoring_account_details",
   description:
-    "Fetch everything known about one company in the competitor monitoring table: the CRM outreach rollup (whether outreach started, whether they replied, the in-market verdict and summary), per-contact outreach records, the recent CRM activity timeline with each entry's reply classification and sentiment, the competitor signals we surfaced and when, live CRM opportunities, and the buying committee — decision-makers at the account beyond the people who engaged a competitor. Identify the company with company_key (from get_competitor_monitoring_table), company_domain, or company_name; one that is not in the table returns found: false rather than an error. Use `include` to fetch only the blocks you need and activity_limit to cap the timeline. " +
+    "Fetch everything known about one company in the competitor monitoring table: the CRM outreach rollup (whether outreach started, whether they replied, the in-market verdict and summary), per-contact outreach records, the recent CRM activity timeline with each entry's reply classification and sentiment, the competitor signals we surfaced and when, live CRM opportunities, and the buying committee — decision-makers at the account beyond the people the signals came from. Identify the company with company_key (from get_competitor_monitoring_table), company_domain, or company_name; one that is not in the table returns found: false rather than an error. Use `include` to fetch only the blocks you need and activity_limit to cap the timeline. " +
     ATTRIBUTION_NOTE +
     " On this tool the verdict is `attributionVerdict` at the top level, with `attributionVerdictReasoning` explaining it. Read THOSE: the `crmOutreach.attribution` rollup deliberately withholds its stored verdict, which is written before the two read-time gates (an existing customer, or a signal window too old to use) and would over-claim on exactly the accounts the product refuses to claim. Each opportunity carries its own attributionLabel, and each MEETING in the activity timeline carries activityDetails.attribution.label — a meeting row with a blank label on an account that has a verdict is gated, not unscored. " +
     HISTORIC_CONNECTION_NOTE +
-    " In the signals block the same distinction is carried as isHistoric: a signal with isHistoric: true marks when our backfill scan DISCOVERED a pre-existing connection, not a moment the person did anything, so never use it to time the signal relative to your outreach. " +
+    " In the signals block the same distinction is carried as isHistoric: a signal with isHistoric: true marks when a pre-existing record was first imported, not a moment the person did anything, so never use it to time the signal relative to your outreach. " +
     BUYING_COMMITTEE_NOTE +
     " " +
     BUYING_COMMITTEE_ABSENCE_NOTE,
@@ -139,7 +139,7 @@ export const competitorMonitoringAccountDetailsTool = {
         type: "array",
         items: { type: "string", enum: [...DETAIL_INCLUDES] },
         description:
-          'Optional: which blocks to return. Defaults to all of them. "outreach" = the CRM rollup and per-contact outreach records; "activity" = the recent activity timeline with reply classification; "signals" = the competitor signals we surfaced; "opportunities" = live CRM deals; "buying_committee" = decision-makers found at the account beyond the people who engaged.'
+          'Optional: which blocks to return. Defaults to all of them. "outreach" = the CRM rollup and per-contact outreach records; "activity" = the recent activity timeline with reply classification; "signals" = the competitor signals we surfaced; "opportunities" = live CRM deals; "buying_committee" = decision-makers found at the account beyond the people the signals came from.'
       },
       activity_limit: {
         type: "number",
