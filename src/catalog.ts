@@ -3,8 +3,8 @@
  *
  * This server offers one fixed catalog — the competitor monitoring table, its
  * per-account drill-down, the buyer-filter definition, and the workspace list.
- * Nothing on it can send a message from a customer's connected account or arm a
- * sequence that would.
+ * Nothing on it can contact anyone on a customer's behalf, or arm a sequence
+ * that would.
  */
 
 import { MCP_SCOPE_READ, MCP_SCOPE_WRITE } from "./scope.js";

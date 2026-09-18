@@ -27,7 +27,7 @@ export const LETTERDROP_ORCHESTRATION_PLAYBOOK = [
 
 Use this playbook when answering questions about which accounts are in a competitor's sales cycle, who at those accounts is involved, and what the CRM says about them.
 
-This connector reads. It cannot send messages, connection requests or reactions from a connected account, and it cannot create or run outreach sequences. When a user asks for those, say so plainly and hand back the recommendation instead of attempting it. The one thing it writes is the buyer-filter definition.`,
+This connector reads. It cannot contact anyone on the workspace's behalf and it cannot create or run outreach sequences. When a user asks for those, say so plainly and hand back the recommendation instead of attempting it. The one thing it writes is the buyer-filter definition.`,
   `## Core rules
 
 1. Start from the table. \`get_competitor_monitoring_table\` answers almost every question at the account grain; reach for \`get_competitor_monitoring_account_details\` only once you have a company to drill into.
@@ -35,7 +35,7 @@ This connector reads. It cannot send messages, connection requests or reactions 
 3. Say what is absent. A blank field on these tools usually means a specific thing — no plan allocated, no claim made, no window observed — and inventing a value for it is worse than reporting the blank.`,
   `## Reading the table
 
-- \`include\` decides both the shape and the cost. The default — \`contacts\`, \`custom_columns\`, \`buying_committee\` — is what table, CSV and report questions need. Add \`summary\` for the metric cards above the table, \`summary_details\` for the per-deal and per-meeting rows behind those cards, \`filter_options\` for the values a filter will accept, \`engagements\` for each contact's full engagement history, \`profile_details\` for role text and photos.
+- \`include\` decides both the shape and the cost. The default — \`contacts\`, \`custom_columns\`, \`buying_committee\` — is what table, CSV and report questions need. Add \`summary\` for the metric cards above the table, \`summary_details\` for the per-deal and per-meeting rows behind those cards, \`filter_options\` for the values a filter will accept, \`engagements\` for each contact's full signal history, \`profile_details\` for role and biography text.
 - To retrieve the whole table, follow \`pagination.nextOffset\` until \`pagination.hasMore\` is false. Do not guess offsets and do not stop at the first page because it looked complete.
 - \`coverage\` reports which contact groups the response actually carries. Check it before concluding that an account has no buying committee.
 - Narrow with \`filters\` and \`search_term\` rather than by fetching everything and discarding rows — the filters run server-side, across every page, and your pagination does not.

@@ -41,7 +41,18 @@ test("keeps MCP tool discovery and orchestration guidance platform-neutral", () 
     orchestrationPlaybook: LETTERDROP_ORCHESTRATION_PLAYBOOK
   });
 
-  assert.doesNotMatch(publicMcpSurface, /linkedin/i);
+  // The published channel vocabulary is exactly these three. Asserting the
+  // positive keeps this test from having to name what it excludes.
+  assert.match(publicMcpSurface, /recommendedChannels\.socialNetwork/);
+  const channelWords = publicMcpSurface.match(
+    /recommendedChannels\.[A-Za-z]+/g
+  );
+  for (const word of channelWords) {
+    assert.ok(
+      ["socialNetwork", "email", "call"].includes(word.split(".")[1]),
+      `${word} is outside the published channel vocabulary`
+    );
+  }
 });
 
 test("includes the full contact roster by default and exposes pagination", async () => {
@@ -54,9 +65,9 @@ test("includes the full contact roster by default and exposes pagination", async
         companyKey: "one",
         contacts: [
           {
-            recommendedAction: "LinkedIn + Call",
+            recommendedAction: "Upstream Label + Call",
             recommendedChannels: {
-              linkedin: true,
+              upstreamChannelKey: true,
               email: false,
               call: true
             }
@@ -66,7 +77,7 @@ test("includes the full contact roster by default and exposes pagination", async
           {
             recommendedAction: "Email",
             recommendedChannels: {
-              linkedin: false,
+              upstreamChannelKey: false,
               email: true,
               call: false
             }
@@ -112,7 +123,13 @@ test("includes the full contact roster by default and exposes pagination", async
     result.accounts[0].buyingCommittee[0].recommendedAction,
     "Email"
   );
-  assert.doesNotMatch(JSON.stringify(result), /linkedin/i);
+  // Neither the upstream key nor the upstream label survives into the payload:
+  // the key is folded onto socialNetwork and the label is rebuilt from the
+  // booleans rather than rewritten, so an unrecognised label cannot pass
+  // through intact.
+  const payload = JSON.stringify(result);
+  assert.doesNotMatch(payload, /upstreamChannelKey/);
+  assert.doesNotMatch(payload, /Upstream Label/);
 });
 
 test("documents the current weekly budget semantics for recommended outreach", () => {

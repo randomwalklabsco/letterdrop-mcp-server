@@ -50,7 +50,7 @@ export class LetterboxClient {
   }
 
   /**
-   * List workspaces the connected user can see.
+   * List the workspaces this connector can see.
    */
   async listWorkspaces(): Promise<McpWorkspace[]> {
     try {

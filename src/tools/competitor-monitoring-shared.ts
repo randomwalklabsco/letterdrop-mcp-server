@@ -84,7 +84,7 @@ export const COMPETITOR_MONITORING_SORT_ORDERS = ["ASC", "DESC"] as const;
 export const COMPETITOR_NO_OPPORTUNITY_DEAL_STATUS = "__no_opportunity__";
 
 export const STAGES_DESCRIPTION =
-  "Optional: filter by sales-cycle stage: Letterdrop's guess at where the company sits in the competitor's cycle, inferred from observed activity rather than read from the competitor's CRM. Accepted values: aware_of_competitor, previously_aware_of_competitor, prospecting, early_stage, late_stage, current_customer. previously_aware_of_competitor only means the engagement happened at some unknown point in the past, so it is not an in-market or active-cycle stage";
+  "Optional: filter by sales-cycle stage: Letterdrop's guess at where the company sits in the competitor's cycle, inferred from observed activity rather than read from the competitor's CRM. Accepted values: aware_of_competitor, previously_aware_of_competitor, prospecting, early_stage, late_stage, current_customer. previously_aware_of_competitor only means the signal happened at some unknown point in the past, so it is not an in-market or active-cycle stage";
 
 export const PRIORITY_DESCRIPTION =
   "Optional: filter by priority bucket. Accepted values: high, medium, low, nurture";
@@ -118,36 +118,36 @@ export const SORT_FIELD_DESCRIPTION =
  * mistake HISTORIC_CONNECTION_NOTE prevents at the contact level.
  */
 export const GUESSED_STAGE_NOTE =
-  "The sales-cycle stage (`stage` / `stageLabel`) is a GUESS: where we think the company sits in the competitor's cycle based on the activity we observed, never a fact from the competitor's CRM. Never state it as fact about their pipeline. `previously_aware_of_competitor` (\"Previously Aware of Competitor\") means only that the contact engaged the competitor at some unknown past point — where accounts found entirely by a backfill scan land — so never count those as potentially in-market or as an active opportunity. `subStage` and `activeCycle` derive from the same guess: `activeCycle: true` is our inference, not a competitor record.";
+  "The sales-cycle stage (`stage` / `stageLabel`) is a GUESS: where we think the company sits in the competitor's cycle based on the activity we observed, never a fact from the competitor's CRM. Never state it as fact about their pipeline. `previously_aware_of_competitor` (\"Previously Aware of Competitor\") means only that a relationship with the competitor existed at some unknown past point — where accounts whose records all predate tracking land — so never count those as potentially in-market or as an active opportunity. `subStage` and `activeCycle` derive from the same guess: `activeCycle: true` is our inference, not a competitor record.";
 
 /**
  * The past-vs-new caveat, stated once and appended to all three
  * tool descriptions.
  *
- * A "historic initial connection" is a relationship that already existed before
- * monitoring started; a one-time backfill scan found it. Its only timestamp is
- * the scan's, which is often TODAY, so a reader that sees a date treats a
- * years-old relationship as a brand-new signal — the exact mistake this note
- * exists to prevent. The app draws the distinction visually ("Past", "Collected
- * on <date>"); a tool result has nothing but field names, so it has to be said.
+ * Some records predate tracking: the relationship already existed, and the
+ * workspace's first import simply recorded it. Its only timestamp is the
+ * import's, which is often TODAY, so a reader that sees a date treats a
+ * years-old record as a brand-new signal — the exact mistake this note exists
+ * to prevent. The app draws the distinction visually ("Past", "Collected on
+ * <date>"); a tool result has nothing but field names, so it has to be said.
  */
 export const HISTORIC_CONNECTION_NOTE =
-  "PAST vs NEW connections — read this before drawing any conclusion about recency. A contact with isHistoricInitialConnection: true (or an account with hasOnlyHistoricInitialConnections: true) is a PAST connection: it already existed before monitoring began and a one-time backfill scan merely discovered it. Never count it as new activity, as a recent signal, as evidence of a live cycle, or as a reason the account is in market now. Its engagement dates (lastEngaged, firstEngaged, connectionTimestamp) are deliberately null because no engagement was observed; collectedDate is only when our scan recorded it, so never present collectedDate as an engagement, connection or activity date. Rows with isHistoricInitialConnection: false are genuine observed signals, and there collectedDate matches lastEngaged.";
+  "PAST vs NEW records — read this before drawing any conclusion about recency. A contact with isHistoricInitialConnection: true (or an account with hasOnlyHistoricInitialConnections: true) PREDATES tracking: the relationship already existed, and the workspace's first import recorded it. Never count it as new activity, as a recent signal, as evidence of a live cycle, or as a reason the account is in market now. Its activity timestamps (lastEngaged, firstEngaged, connectionTimestamp) are deliberately null because nothing was observed; collectedDate is only when the import recorded the record, so never present collectedDate as an activity date. Rows with isHistoricInitialConnection: false are observed signals, and there collectedDate matches lastEngaged.";
 
 /**
- * The engaged-vs-committee caveat, the second thing a reader of
+ * The signal-owner-vs-committee caveat, the second thing a reader of
  * these results gets wrong.
  *
- * A buying-committee entry is shaped almost exactly like an engaged contact and
- * carries `competitors` and `engagedWith` naming a real competitor rep — because
- * those describe the ACCOUNT, not the person. Handed one entry, a
- * model read `engagedWith` as an action and drafted "you're listed alongside
- * HubSpot's Jonathan Sobo" into a cold email about someone who had done nothing.
- * The API now stamps every entry with contactType/hasOwnSignal; this note tells
- * the reader what those mean and what the lookalike fields do not.
+ * A buying-committee entry is shaped almost exactly like a contact with a
+ * signal and carries `competitors` and `engagedWith` — because those describe
+ * the ACCOUNT, not the person. Handed one entry, a model read `engagedWith` as
+ * something the person had done and wrote it into a cold email about someone
+ * who had done nothing. The API stamps every entry with
+ * contactType/hasOwnSignal; this note tells the reader what those mean and what
+ * the lookalike fields do not.
  */
 export const BUYING_COMMITTEE_NOTE =
-  "ENGAGED CONTACTS vs BUYING COMMITTEE — what you may claim about a person depends on this. Every person carries contactType and hasOwnSignal. contactType: 'Engaged Contact' (hasOwnSignal: true) means that person personally liked, commented on, followed or connected with a competitor's rep, and that action is the signal. contactType: 'Buying Committee' (hasOwnSignal: false) means the opposite: they engaged nobody, and we found them by searching for decision-makers at an account that had signals from other people. The trap: committee entries still carry `competitors` and an `engagedWith` rep, because those describe the ACCOUNT — which competitor surfaced it, and which rep its ENGAGED contacts interacted with (the same values appear under accountCompetitorContext). Never say or imply that a Buying Committee person engaged, connected with, interacted with, was contacted by, or is known to that competitor or rep, and never use them as evidence of intent. They are someone worth reaching out to at an account that has signals, nothing more, and they carry no engagement dates, so they can never be ranked by recency.";
+  "ENGAGED CONTACTS vs BUYING COMMITTEE — what you may claim about a person depends on this. Every person carries contactType and hasOwnSignal. contactType: 'Engaged Contact' (hasOwnSignal: true) means the signal came from that person directly. contactType: 'Buying Committee' (hasOwnSignal: false) means the opposite: the person produced no signal of their own and was identified as a decision-maker at an account where signals came from other people. The trap: committee entries still carry `competitors` and an `engagedWith` value, because those describe the ACCOUNT — which competitor surfaced it, and the context behind the account's own signals (the same values appear under accountCompetitorContext). Never say or imply that a Buying Committee person did anything toward that competitor, was contacted by them, or is known to them, and never use them as evidence of intent. They are someone worth reaching out to at an account that has signals, nothing more, and they carry no timestamps, so they can never be ranked by recency.";
 
 /**
  * Absence of committee data is not absence of a committee. The
@@ -232,7 +232,7 @@ export const COMPETITOR_MONITORING_FILTER_JSON_SCHEMA = {
   competitors: {
     type: "array",
     items: { type: "string" },
-    description: "Optional: filter by the competitor(s) the account engaged"
+    description: "Optional: filter by the account's competitor(s)"
   },
   stages: {
     type: "array",
@@ -412,8 +412,77 @@ export function buildCompetitorMonitoringFilters(
 }
 
 /**
- * Keep the competitor-monitoring response aligned with the platform-neutral
- * MCP vocabulary while preserving every other field returned by the API.
+ * The channel vocabulary this server publishes. Anything else is a wire detail
+ * of the upstream API and is folded into `socialNetwork` before it reaches a
+ * client.
+ */
+const NEUTRAL_CHANNEL_KEYS = ["socialNetwork", "email", "call"] as const;
+
+const CHANNEL_LABELS: Record<string, string> = {
+  socialNetwork: "Social Network",
+  email: "Email",
+  call: "Call"
+};
+
+/** A label built only from the vocabulary above, in any combination. */
+const NEUTRAL_LABEL_PATTERN =
+  /^(?:Social Network|Email|Call)(?:\s*[+/&,]\s*(?:Social Network|Email|Call))*$/i;
+
+type NormalizedChannels = Record<string, unknown>;
+
+/**
+ * Fold the upstream channel map onto the published keys.
+ *
+ * An ALLOWLIST: `email` and `call` pass through, and every other key is treated
+ * as the social channel. Matching a known key by name would be the obvious
+ * alternative and it is the wrong shape — a key this server has not heard of
+ * would then pass straight through to the client, which is how an upstream
+ * rename becomes a published field nobody reviewed.
+ */
+function normalizeRecommendedChannels(
+  channels: Record<string, unknown>
+): NormalizedChannels {
+  const normalized: NormalizedChannels = {};
+  let social: unknown;
+
+  for (const [key, value] of Object.entries(channels)) {
+    if (key === "email" || key === "call") {
+      normalized[key] = value;
+      continue;
+    }
+    if (key === "socialNetwork") {
+      social = value;
+      continue;
+    }
+    // An unrecognised key is the social channel under an upstream name.
+    if (social === undefined || social === false) {
+      social = value;
+    }
+  }
+
+  if (social !== undefined) {
+    normalized.socialNetwork = social;
+  }
+
+  return normalized;
+}
+
+/** "Social Network + Call", built from the booleans rather than parsed. */
+function labelFromChannels(channels: NormalizedChannels): string {
+  return NEUTRAL_CHANNEL_KEYS.filter((key) => channels[key] === true)
+    .map((key) => CHANNEL_LABELS[key])
+    .join(" + ");
+}
+
+/**
+ * Keep the competitor-monitoring response aligned with the published
+ * vocabulary while preserving every other field returned by the API.
+ *
+ * `recommendedAction` is the upstream UI label. It is republished only when it
+ * is already built from the vocabulary above; otherwise it is rebuilt from
+ * `recommendedChannels`, which is the machine-readable truth and says the same
+ * thing. Rebuilding rather than rewriting is what makes this fail closed: an
+ * upstream label this server has never seen cannot reach a client intact.
  */
 export function normalizeCompetitorMonitoringResponse<T>(value: T): T {
   if (Array.isArray(value)) {
@@ -426,32 +495,35 @@ export function normalizeCompetitorMonitoringResponse<T>(value: T): T {
     return value;
   }
 
+  const source = value as Record<string, unknown>;
   const normalized: Record<string, unknown> = {};
 
-  for (const [key, nestedValue] of Object.entries(value)) {
-    if (key === "recommendedAction" && typeof nestedValue === "string") {
-      // The backend/export use the provider-specific UI label. MCP keeps its
-      // authored and returned vocabulary platform-neutral, matching the
-      // recommendedChannels.socialNetwork key below.
-      normalized[key] = nestedValue.replace(/\bLinkedIn\b/gi, "Social Network");
+  const rawChannels = source.recommendedChannels;
+  const channels =
+    rawChannels &&
+    typeof rawChannels === "object" &&
+    !Array.isArray(rawChannels)
+      ? normalizeRecommendedChannels(rawChannels as Record<string, unknown>)
+      : null;
+
+  for (const [key, nestedValue] of Object.entries(source)) {
+    if (key === "recommendedChannels" && channels) {
+      normalized[key] = channels;
       continue;
     }
 
-    if (
-      key === "recommendedChannels" &&
-      nestedValue &&
-      typeof nestedValue === "object" &&
-      !Array.isArray(nestedValue)
-    ) {
-      const channels = nestedValue as Record<string, unknown>;
-      const { linkedin: legacySocialNetwork, ...otherChannels } = channels;
-      normalized[key] = {
-        ...normalizeCompetitorMonitoringResponse(otherChannels),
-        ...(legacySocialNetwork !== undefined &&
-        otherChannels.socialNetwork === undefined
-          ? { socialNetwork: legacySocialNetwork }
-          : {})
-      };
+    if (key === "recommendedAction" && typeof nestedValue === "string") {
+      const label = nestedValue.trim();
+      if (!label || NEUTRAL_LABEL_PATTERN.test(label)) {
+        normalized[key] = label;
+        continue;
+      }
+      const rebuilt = channels ? labelFromChannels(channels) : "";
+      // No channels to rebuild from means there is nothing safe to publish.
+      // Omit the field rather than assert an allocation that may be wrong.
+      if (rebuilt) {
+        normalized[key] = rebuilt;
+      }
       continue;
     }
 

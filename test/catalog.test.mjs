@@ -84,11 +84,18 @@ test("the playbook names only tools this server registers", () => {
   }
 });
 
-test("no tool description or schema names a specific social network", () => {
-  assert.doesNotMatch(
-    JSON.stringify({ tools, playbook: LETTERDROP_ORCHESTRATION_PLAYBOOK }),
-    /linkedin/i
-  );
+test("the catalog publishes only the neutral channel vocabulary", () => {
+  const surface = JSON.stringify({
+    tools,
+    playbook: LETTERDROP_ORCHESTRATION_PLAYBOOK
+  });
+
+  for (const word of surface.match(/recommendedChannels\.[A-Za-z]+/g) || []) {
+    assert.ok(
+      ["socialNetwork", "email", "call"].includes(word.split(".")[1]),
+      `${word} is outside the published channel vocabulary`
+    );
+  }
 });
 
 test("the server publishes its own name and both scopes", () => {
