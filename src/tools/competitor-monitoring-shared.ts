@@ -412,8 +412,77 @@ export function buildCompetitorMonitoringFilters(
 }
 
 /**
- * Keep the competitor-monitoring response aligned with the platform-neutral
- * MCP vocabulary while preserving every other field returned by the API.
+ * The channel vocabulary this server publishes. Anything else is a wire detail
+ * of the upstream API and is folded into `socialNetwork` before it reaches a
+ * client.
+ */
+const NEUTRAL_CHANNEL_KEYS = ["socialNetwork", "email", "call"] as const;
+
+const CHANNEL_LABELS: Record<string, string> = {
+  socialNetwork: "Social Network",
+  email: "Email",
+  call: "Call"
+};
+
+/** A label built only from the vocabulary above, in any combination. */
+const NEUTRAL_LABEL_PATTERN =
+  /^(?:Social Network|Email|Call)(?:\s*[+/&,]\s*(?:Social Network|Email|Call))*$/i;
+
+type NormalizedChannels = Record<string, unknown>;
+
+/**
+ * Fold the upstream channel map onto the published keys.
+ *
+ * An ALLOWLIST: `email` and `call` pass through, and every other key is treated
+ * as the social channel. Matching a known key by name would be the obvious
+ * alternative and it is the wrong shape — a key this server has not heard of
+ * would then pass straight through to the client, which is how an upstream
+ * rename becomes a published field nobody reviewed.
+ */
+function normalizeRecommendedChannels(
+  channels: Record<string, unknown>
+): NormalizedChannels {
+  const normalized: NormalizedChannels = {};
+  let social: unknown;
+
+  for (const [key, value] of Object.entries(channels)) {
+    if (key === "email" || key === "call") {
+      normalized[key] = value;
+      continue;
+    }
+    if (key === "socialNetwork") {
+      social = value;
+      continue;
+    }
+    // An unrecognised key is the social channel under an upstream name.
+    if (social === undefined || social === false) {
+      social = value;
+    }
+  }
+
+  if (social !== undefined) {
+    normalized.socialNetwork = social;
+  }
+
+  return normalized;
+}
+
+/** "Social Network + Call", built from the booleans rather than parsed. */
+function labelFromChannels(channels: NormalizedChannels): string {
+  return NEUTRAL_CHANNEL_KEYS.filter((key) => channels[key] === true)
+    .map((key) => CHANNEL_LABELS[key])
+    .join(" + ");
+}
+
+/**
+ * Keep the competitor-monitoring response aligned with the published
+ * vocabulary while preserving every other field returned by the API.
+ *
+ * `recommendedAction` is the upstream UI label. It is republished only when it
+ * is already built from the vocabulary above; otherwise it is rebuilt from
+ * `recommendedChannels`, which is the machine-readable truth and says the same
+ * thing. Rebuilding rather than rewriting is what makes this fail closed: an
+ * upstream label this server has never seen cannot reach a client intact.
  */
 export function normalizeCompetitorMonitoringResponse<T>(value: T): T {
   if (Array.isArray(value)) {
@@ -426,32 +495,35 @@ export function normalizeCompetitorMonitoringResponse<T>(value: T): T {
     return value;
   }
 
+  const source = value as Record<string, unknown>;
   const normalized: Record<string, unknown> = {};
 
-  for (const [key, nestedValue] of Object.entries(value)) {
-    if (key === "recommendedAction" && typeof nestedValue === "string") {
-      // The backend/export use the provider-specific UI label. MCP keeps its
-      // authored and returned vocabulary platform-neutral, matching the
-      // recommendedChannels.socialNetwork key below.
-      normalized[key] = nestedValue.replace(/\bLinkedIn\b/gi, "Social Network");
+  const rawChannels = source.recommendedChannels;
+  const channels =
+    rawChannels &&
+    typeof rawChannels === "object" &&
+    !Array.isArray(rawChannels)
+      ? normalizeRecommendedChannels(rawChannels as Record<string, unknown>)
+      : null;
+
+  for (const [key, nestedValue] of Object.entries(source)) {
+    if (key === "recommendedChannels" && channels) {
+      normalized[key] = channels;
       continue;
     }
 
-    if (
-      key === "recommendedChannels" &&
-      nestedValue &&
-      typeof nestedValue === "object" &&
-      !Array.isArray(nestedValue)
-    ) {
-      const channels = nestedValue as Record<string, unknown>;
-      const { linkedin: legacySocialNetwork, ...otherChannels } = channels;
-      normalized[key] = {
-        ...normalizeCompetitorMonitoringResponse(otherChannels),
-        ...(legacySocialNetwork !== undefined &&
-        otherChannels.socialNetwork === undefined
-          ? { socialNetwork: legacySocialNetwork }
-          : {})
-      };
+    if (key === "recommendedAction" && typeof nestedValue === "string") {
+      const label = nestedValue.trim();
+      if (!label || NEUTRAL_LABEL_PATTERN.test(label)) {
+        normalized[key] = label;
+        continue;
+      }
+      const rebuilt = channels ? labelFromChannels(channels) : "";
+      // No channels to rebuild from means there is nothing safe to publish.
+      // Omit the field rather than assert an allocation that may be wrong.
+      if (rebuilt) {
+        normalized[key] = rebuilt;
+      }
       continue;
     }
 

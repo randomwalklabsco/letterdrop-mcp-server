@@ -67,10 +67,11 @@ export interface CompetitorEngagedWith {
 }
 
 export interface CompetitorRecommendedChannels {
-  /** Backend wire key; renamed to `socialNetwork` before it reaches a client. */
-  linkedin?: boolean;
+  socialNetwork?: boolean;
   email?: boolean;
   call?: boolean;
+  /** Upstream wire keys are folded onto `socialNetwork` before publication. */
+  [channel: string]: boolean | undefined;
 }
 
 export interface CompetitorMonitoringAccountContact {
