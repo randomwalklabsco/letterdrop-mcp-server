@@ -2,8 +2,6 @@
 
 A [Model Context Protocol](https://modelcontextprotocol.io) server for Letterdrop **competitor monitoring**. It lets an AI assistant find the accounts that are in a competitor's sales cycle, see who at those accounts is involved, and check what the CRM says about them.
 
-The server only reads. The one thing it can change is the workspace's buyer-filter definition. It cannot contact anyone on the workspace's behalf or create outreach sequences.
-
 ## Tools
 
 | Tool                                        | Access | What it does                                                                                                                                                                                            |
