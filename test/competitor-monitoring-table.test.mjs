@@ -147,6 +147,10 @@ test("documents the current weekly budget semantics for recommended outreach", (
     LETTERDROP_ORCHESTRATION_PLAYBOOK,
     /recommendedChannels\.socialNetwork.*\.email.*\.call/s
   );
+  assert.match(
+    LETTERDROP_ORCHESTRATION_PLAYBOOK,
+    /`workEmail`, `personalEmails` and `phone`/
+  );
 });
 
 test("honors an explicit lightweight include selection", async () => {
