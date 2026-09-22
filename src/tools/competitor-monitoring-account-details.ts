@@ -17,6 +17,7 @@ import {
   ATTRIBUTION_NOTE,
   BUYING_COMMITTEE_ABSENCE_NOTE,
   BUYING_COMMITTEE_NOTE,
+  CONTACT_INFO_NOTE,
   HISTORIC_CONNECTION_NOTE,
   normalizeCompetitorMonitoringResponse
 } from "./competitor-monitoring-shared.js";
@@ -116,7 +117,9 @@ export const competitorMonitoringAccountDetailsTool = {
     " In the signals block the same distinction is carried as isHistoric: a signal with isHistoric: true marks when a pre-existing record was first imported, not a moment the person did anything, so never use it to time the signal relative to your outreach. " +
     BUYING_COMMITTEE_NOTE +
     " " +
-    BUYING_COMMITTEE_ABSENCE_NOTE,
+    BUYING_COMMITTEE_ABSENCE_NOTE +
+    " " +
+    CONTACT_INFO_NOTE,
   inputSchema: {
     type: "object",
     properties: {

@@ -194,6 +194,13 @@ export const BUDGETED_RECOMMENDATION_NOTE =
   "BUDGETED OUTREACH — `recommendedAction` is the outbound channel or channel combination allocated to this contact by the workspace's current weekly email, social-network, and call capacity plan. Use `recommendedChannels.socialNetwork`, `.email`, and `.call` when you need machine-readable booleans instead of parsing the label. An empty `recommendedAction` means no action was allocated to that contact in the current plan (or no current plan is available); never invent an action or interpret the blank as evidence that the person is unreachable or unqualified.";
 
 /**
+ * GET-10596 — the lead's own email and phone, which the rows now carry so a
+ * caller never has to enrich someone this workspace already enriched.
+ */
+export const CONTACT_INFO_NOTE =
+  "CONTACT DETAILS — each person carries `workEmail`, `personalEmails` (a list) and `phone`: the contact details this workspace has already enriched for that person (its workflows' contact-info step, and personal emails it has paid for). Use them directly instead of enriching the person again. A blank value means nothing has been found yet for this workspace, not that the person has none. These are the lead's own details; `contactedByOwner.email` is your teammate's address, and `recommendedChannels.email` is a channel flag, not an address.";
+
+/**
  * JSON Schema fragments for the filters every competitor monitoring tool
  * accepts. The MCP tool definitions hand-write their JSON Schema to mirror the
  * Zod schema, so sharing the common half keeps the two in step.

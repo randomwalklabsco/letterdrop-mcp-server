@@ -36,6 +36,7 @@ import {
   BUYING_COMMITTEE_ABSENCE_NOTE,
   BUYING_COMMITTEE_NOTE,
   BUDGETED_RECOMMENDATION_NOTE,
+  CONTACT_INFO_NOTE,
   BEST_FIT_DESCRIPTION,
   CUSTOM_COLUMN_VALUES_DESCRIPTION,
   EXISTING_ACCOUNT_DESCRIPTION,
@@ -254,8 +255,10 @@ export async function handleCompetitorMonitoringTable(
 export const competitorMonitoringTableTool = {
   name: "get_competitor_monitoring_table",
   description:
-    "Fetch the full competitor monitoring table: the single account-grained read behind every competitor-table, all-leads, decision-maker, CSV, export and recommended-outreach question. One row per company, with both contact groups by default — `contacts` are the people the signals came from, `buyingCommittee` the wider decision-makers at the same account. There is no separate per-lead or 'Show buying committee' tool; the committee is part of this response unless `include` drops `buying_committee`. Each person carries `recommendedAction` and `recommendedChannels`, outreach guidance from the workspace's weekly capacity plan rather than an email address or a named sequence. Each account also carries its competitors, priority (high/medium/low/nurture), staleness, guessed stage and reasoning, CRM deal status / stage / amount / owner / open and close dates, outreach status and CRM summary, custom CRM columns, signal dates, and contacted/replied state. Supports free-text search, filters, sorting and limit-offset pagination: follow `pagination.hasMore` and `pagination.nextOffset` for the whole dataset, but start at limit 25 and narrow with filters rather than paging deeply, since each page is a full table read. `existingAccount` is null when the CRM lookup was unavailable, which is NOT the same as net-new. " +
+    "Fetch the full competitor monitoring table: the single account-grained read behind every competitor-table, all-leads, decision-maker, CSV, export and recommended-outreach question. One row per company, with both contact groups by default — `contacts` are the people the signals came from, `buyingCommittee` the wider decision-makers at the same account. There is no separate per-lead or 'Show buying committee' tool; the committee is part of this response unless `include` drops `buying_committee`. Each person carries `recommendedAction` and `recommendedChannels`, outreach guidance from the workspace's weekly capacity plan rather than an email address or a named sequence; the person's own email and phone are `workEmail`, `personalEmails` and `phone`. Each account also carries its competitors, priority (high/medium/low/nurture), staleness, guessed stage and reasoning, CRM deal status / stage / amount / owner / open and close dates, outreach status and CRM summary, custom CRM columns, signal dates, and contacted/replied state. Supports free-text search, filters, sorting and limit-offset pagination: follow `pagination.hasMore` and `pagination.nextOffset` for the whole dataset, but start at limit 25 and narrow with filters rather than paging deeply, since each page is a full table read. `existingAccount` is null when the CRM lookup was unavailable, which is NOT the same as net-new. " +
     BUDGETED_RECOMMENDATION_NOTE +
+    " " +
+    CONTACT_INFO_NOTE +
     " " +
     GUESSED_STAGE_NOTE +
     " " +
