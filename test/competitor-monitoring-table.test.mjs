@@ -5,6 +5,7 @@ import {
   handleCompetitorMonitoringTable,
   competitorMonitoringTableTool
 } from "../dist/tools/competitor-monitoring-table.js";
+import { competitorMonitoringAccountDetailsTool } from "../dist/tools/competitor-monitoring-account-details.js";
 import { tools, toolHandlers, toolSchemas } from "../dist/tools/index.js";
 import { LETTERDROP_ORCHESTRATION_PLAYBOOK } from "../dist/playbook.js";
 
@@ -146,6 +147,10 @@ test("documents the current weekly budget semantics for recommended outreach", (
     LETTERDROP_ORCHESTRATION_PLAYBOOK,
     /recommendedChannels\.socialNetwork.*\.email.*\.call/s
   );
+  assert.match(
+    LETTERDROP_ORCHESTRATION_PLAYBOOK,
+    /`workEmail`, `personalEmails` and `phone`/
+  );
 });
 
 test("honors an explicit lightweight include selection", async () => {
@@ -263,4 +268,18 @@ test("points the details tool at the gated verdict, not the stored one", async (
   assert.match(description, /deliberately withholds its stored verdict/);
   // A blank meeting label on a scored account is gated, not unscored.
   assert.match(description, /is gated, not unscored/);
+});
+
+// GET-10596 — the rows carry the lead's own email and phone. Both tools have to
+// say so, or a caller goes off to enrich someone Letterdrop already found, and
+// has to keep them apart from the two other "email" fields on the same row.
+test("tells callers the lead's email and phone are on every person", () => {
+  for (const tool of [
+    competitorMonitoringTableTool,
+    competitorMonitoringAccountDetailsTool
+  ]) {
+    assert.match(tool.description, /`workEmail`, `personalEmails`/);
+    assert.match(tool.description, /instead of enriching the person again/);
+    assert.match(tool.description, /nothing has been found yet/);
+  }
 });

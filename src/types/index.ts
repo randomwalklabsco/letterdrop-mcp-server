@@ -81,6 +81,12 @@ export interface CompetitorMonitoringAccountContact {
   jobTitle?: string;
   companyName?: string;
   companyDomain?: string;
+  /** GET-10596 — the person's work email, when already found; "" otherwise. */
+  workEmail?: string;
+  /** GET-10596 — the person's personal email addresses already found. */
+  personalEmails?: string[];
+  /** GET-10596 — the person's phone number, when already found; "" otherwise. */
+  phone?: string;
   /** Suggested outbound channel or channel combination for this person. */
   recommendedAction?: string;
   /** Channel flags derived from recommendedAction; `email` is not an email address. */
@@ -115,6 +121,12 @@ export interface CompetitorBuyingCommitteeContact {
   jobTitle?: string;
   companyName?: string;
   companyDomain?: string;
+  /** GET-10596 — the person's work email, when already found; "" otherwise. */
+  workEmail?: string;
+  /** GET-10596 — the person's personal email addresses already found. */
+  personalEmails?: string[];
+  /** GET-10596 — the person's phone number, when already found; "" otherwise. */
+  phone?: string;
   /** Suggested outbound channel or channel combination for this person. */
   recommendedAction?: string;
   /** Channel flags derived from recommendedAction; `email` is not an email address. */

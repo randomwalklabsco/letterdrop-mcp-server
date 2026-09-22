@@ -12,6 +12,7 @@ const COMPETITOR_MONITORING_SECTION = `## Competitor monitoring and budgeted out
 - Use \`get_competitor_monitoring_table\` when the user asks who to contact from competitor signals, what outreach is recommended, or for a table, CSV, spreadsheet, export, or report of those recommendations.
 - Keep both \`contacts\` and \`buyingCommittee\` in the response. Each person can carry a \`recommendedAction\` allocated by the workspace's current weekly email, social-network, and call capacity plan.
 - Read \`recommendedChannels.socialNetwork\`, \`.email\`, and \`.call\` for machine-readable channel flags. Do not parse the action label when the booleans are available.
+- Those flags are channels, not addresses. The person's own contact details are \`workEmail\`, \`personalEmails\` and \`phone\`, which this workspace has already enriched; use them rather than enriching the person again, and read a blank as not found yet, not as having none.
 - A blank \`recommendedAction\` means the current plan allocated no action to that contact or no current plan is available. Do not invent a recommendation, and do not treat the blank as evidence that the person is unreachable or unqualified.`;
 
 /**
