@@ -151,6 +151,20 @@ export interface CompetitorBuyingCommitteeContact {
   [key: string]: unknown;
 }
 
+/** GET-10378 — one CRM company record behind a competitor-monitoring account.
+ *  `primary` is the account's own record; the others were judged to be the
+ *  same company (e.g. "The Sphere" for Sphere Entertainment). Parent and
+ *  subsidiary companies are never included. */
+export interface CompetitorCrmCompany {
+  crmSource: "hubspot" | "salesforce" | "";
+  accountId: string;
+  name: string;
+  domain: string;
+  /** HubSpot company / Salesforce Account link; "" when unavailable. */
+  url: string;
+  primary: boolean;
+}
+
 export interface CompetitorMonitoringAccount {
   companyKey?: string;
   companyName?: string;
@@ -196,6 +210,10 @@ export interface CompetitorMonitoringAccount {
   dealOwnerEmail?: string;
   latestOpportunityId?: string;
   latestOpportunityIsClosed?: boolean | null;
+  /** GET-10378 — set when the representative deal sits on another CRM record
+   *  of the same company rather than on the account's own. */
+  dealMatchedVia?: { verdict: "same"; domain: string } | null;
+  crmCompanies?: CompetitorCrmCompany[];
   opportunityCount?: number;
   accountOwner?: string;
   accountOwnerEmail?: string;
@@ -247,6 +265,7 @@ export interface CompetitorMonitoringAccountDetailsResponse {
   companyKey?: string;
   companyName?: string;
   companyDomain?: string;
+  crmCompanies?: CompetitorCrmCompany[];
   crmOutreach?: Record<string, unknown>;
   contactActivity?: Array<Record<string, unknown>>;
   activities?: Array<Record<string, unknown>>;
