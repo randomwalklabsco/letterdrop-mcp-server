@@ -97,7 +97,8 @@ test("includes the full contact roster by default and exposes pagination", async
     {
       limit: 2,
       include: ["contacts", "custom_columns", "buying_committee"],
-      maxContactsPerAccount: 100
+      maxContactsPerAccount: 100,
+      priorityMode: "display"
     }
   ]);
   assert.deepEqual(result.pagination, { hasMore: true, nextOffset: 2 });
@@ -171,7 +172,8 @@ test("honors an explicit lightweight include selection", async () => {
   assert.deepEqual(calls, [
     {
       include: ["contacts"],
-      maxContactsPerAccount: 5
+      maxContactsPerAccount: 5,
+      priorityMode: "display"
     }
   ]);
   assert.deepEqual(result.pagination, { hasMore: false, nextOffset: null });
@@ -282,4 +284,37 @@ test("tells callers the lead's email and phone are on every person", () => {
     assert.match(tool.description, /instead of enriching the person again/);
     assert.match(tool.description, /nothing has been found yet/);
   }
+});
+
+// GET-10747 — the dashboard groups accounts into three outreach buckets
+// (GET-10649) while the plain API keeps the stored four-tier score, so the MCP
+// reported a different High/Medium/Low/Nurture split from the dashboard.
+test("asks the backend for the dashboard's three priority buckets", async () => {
+  const { calls, client } = createClient({
+    success: true,
+    data: { accounts: [], totalRecords: 0, limit: 25, offset: 0 }
+  });
+
+  await handleCompetitorMonitoringTable(client, {
+    priority: ["high", "medium"]
+  });
+
+  assert.equal(calls[0].priorityMode, "display");
+  assert.deepEqual(calls[0].filters.priority, ["high", "medium"]);
+});
+
+test("offers only the three dashboard priority buckets", () => {
+  const properties = competitorMonitoringTableTool.inputSchema.properties;
+
+  assert.deepEqual(properties.priority.items.enum, [
+    "high",
+    "medium",
+    "nurture"
+  ]);
+  assert.equal(
+    toolSchemas.get_competitor_monitoring_table.safeParse({
+      priority: ["low"]
+    }).success,
+    false
+  );
 });

@@ -177,6 +177,7 @@ export interface CompetitorMonitoringAccount {
   companyLocationCountry?: string;
   competitors?: string[];
   competitorConnectionCount?: number;
+  /** GET-10747 — the dashboard's outreach bucket: high, medium or nurture. */
   priority?: string;
   priorityScore?: number;
   /** The export's "Stale": the account's signal aged past the

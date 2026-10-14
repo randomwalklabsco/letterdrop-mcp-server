@@ -14,10 +14,13 @@ export const COMPETITOR_MONITORING_STAGES = [
   "current_customer"
 ] as const;
 
+// GET-10747 — the Competitor Monitoring dashboard's three outreach buckets
+// (GET-10649). The table tool asks letterbox for display-mode priority, so
+// the filter, each account's `priority` and the summary counts use these and
+// match the dashboard. There is no Low.
 export const COMPETITOR_MONITORING_PRIORITIES = [
   "high",
   "medium",
-  "low",
   "nurture"
 ] as const;
 
@@ -87,7 +90,7 @@ export const STAGES_DESCRIPTION =
   "Optional: filter by sales-cycle stage: Letterdrop's guess at where the company sits in the competitor's cycle, inferred from observed activity rather than read from the competitor's CRM. Accepted values: aware_of_competitor, previously_aware_of_competitor, prospecting, early_stage, late_stage, current_customer. previously_aware_of_competitor only means the signal happened at some unknown point in the past, so it is not an in-market or active-cycle stage";
 
 export const PRIORITY_DESCRIPTION =
-  "Optional: filter by priority bucket. Accepted values: high, medium, low, nurture";
+  "Optional: filter by priority bucket, the same three buckets as the Competitor Monitoring dashboard. Accepted values: high (reach out now), medium (reach out if the team has capacity), nurture (marketing / automated campaigns). There is no low. Sell Now on the dashboard is high + medium";
 
 export const DEAL_STATUS_DESCRIPTION =
   'Optional: filter by CRM deal status / stage label. Use "__no_opportunity__" for accounts with no CRM opportunity at all';
