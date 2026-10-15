@@ -197,6 +197,13 @@ export const BUDGETED_RECOMMENDATION_NOTE =
   "BUDGETED OUTREACH — `recommendedAction` is the outbound channel or channel combination allocated to this contact by the workspace's current weekly email, social-network, and call capacity plan. Use `recommendedChannels.socialNetwork`, `.email`, and `.call` when you need machine-readable booleans instead of parsing the label. An empty `recommendedAction` means no action was allocated to that contact in the current plan (or no current plan is available); never invent an action or interpret the blank as evidence that the person is unreachable or unqualified.";
 
 /**
+ * Job postings are collected only for accounts queued for fit review, so a
+ * missing block must not read as "this company is not hiring".
+ */
+export const JOB_POSTINGS_NOTE =
+  "JOB POSTINGS — the company's job postings from the last 24 months, each parsed for what it literally says: `competitorsMentioned` (your tracked competitors the posting names, with the quote), `systemsInUse` (software the company runs, is adopting or is moving off), `initiatives` (projects and migrations it describes; `relevantToWorkspace` marks the ones that create a need for what you sell) and `hiringManager` (the person the role reports to, when named — often a member of the wider buying committee). Every quote is copied verbatim from the posting. Postings are collected only for accounts queued for fit review and refreshed about monthly, so status `not_fetched` means not looked up yet, not that the company has no postings. Some postings carry only a summary of the description and can miss specific systems.";
+
+/**
  * GET-10596 — the lead's own email and phone, which the rows now carry so a
  * caller never has to enrich someone this workspace already enriched.
  */
