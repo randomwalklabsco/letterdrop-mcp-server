@@ -78,6 +78,7 @@ export class LetterboxClient {
     startDate?: string;
     endDate?: string;
     maxContactsPerAccount?: number;
+    priorityMode?: "display" | "stored";
   }): Promise<CompetitorMonitoringAccountsResponse> {
     try {
       const response = await this.client.post<
@@ -94,7 +95,8 @@ export class LetterboxClient {
         ...(params.endDate ? { endDate: params.endDate } : {}),
         ...(params.maxContactsPerAccount !== undefined
           ? { maxContactsPerAccount: params.maxContactsPerAccount }
-          : {})
+          : {}),
+        ...(params.priorityMode ? { priorityMode: params.priorityMode } : {})
       });
       if (!response.data?.data) {
         throw new Error("Empty competitor monitoring accounts response");
