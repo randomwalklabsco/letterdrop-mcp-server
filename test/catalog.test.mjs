@@ -13,7 +13,7 @@ import { tools, toolHandlers, toolSchemas } from "../dist/tools/index.js";
 
 /**
  * This server's listing says it reads competitor monitoring data and writes
- * only the buyer-filter definition. These tests are that claim, written down.
+ * only the buyer-filter definition and the active workspace. These tests are that claim, written down.
  */
 
 const EXPECTED_TOOL_NAMES = [
@@ -21,13 +21,14 @@ const EXPECTED_TOOL_NAMES = [
   "get_competitor_monitoring_account_details",
   "get_knowledge_base_buyer_filters",
   "update_knowledge_base_buyer_filters",
-  "list_workspaces"
+  "list_workspaces",
+  "set_active_workspace"
 ];
 
 const namesOf = (toolList) => toolList.map((tool) => tool.name);
 
-test("the server offers exactly the five listed tools", () => {
-  // A sixth appearing here is a change to what the listing says the connector
+test("the server offers exactly the six listed tools", () => {
+  // A seventh appearing here is a change to what the listing says the connector
   // does, so it should fail this test before it reaches a reviewer.
   assert.deepEqual(namesOf(tools), EXPECTED_TOOL_NAMES);
 });
@@ -55,17 +56,32 @@ test("every tool carries the title and hints the directory requires", () => {
   }
 });
 
-test("the only write prompts before it runs", () => {
+test("the two writes are the buyer filters and the workspace switch", () => {
   const writes = tools.filter((tool) => !tool.annotations.readOnlyHint);
-  assert.deepEqual(namesOf(writes), ["update_knowledge_base_buyer_filters"]);
-  assert.equal(writes[0].annotations.destructiveHint, true);
+  assert.deepEqual(namesOf(writes), [
+    "update_knowledge_base_buyer_filters",
+    "set_active_workspace"
+  ]);
 });
 
-test("a read-only grant is offered every tool except the write", () => {
+test("only the buyer-filter rewrite prompts before it runs", () => {
+  // Switching workspace replaces nothing and is undone by switching back, so
+  // it must not carry the hint that makes a client confirm every call.
+  const destructive = tools.filter((tool) => tool.annotations.destructiveHint);
+  assert.deepEqual(namesOf(destructive), [
+    "update_knowledge_base_buyer_filters"
+  ]);
+});
+
+test("a read-only grant is offered every tool except the writes", () => {
+  // The API gates the workspace switch on mcp.write too, so offering it to a
+  // read-only grant would only hand the user a tool that is refused.
   assert.deepEqual(
     namesOf(filterToolsForScope(tools, "mcp.read")),
     EXPECTED_TOOL_NAMES.filter(
-      (toolName) => toolName !== "update_knowledge_base_buyer_filters"
+      (toolName) =>
+        toolName !== "update_knowledge_base_buyer_filters" &&
+        toolName !== "set_active_workspace"
     )
   );
 });

@@ -296,6 +296,11 @@ export interface McpWorkspace {
   isActive: boolean;
 }
 
+export interface SetActiveWorkspaceResult {
+  publicationId: string;
+  name: string | null;
+}
+
 export interface ListWorkspacesResponse {
   workspaces: McpWorkspace[];
 }
