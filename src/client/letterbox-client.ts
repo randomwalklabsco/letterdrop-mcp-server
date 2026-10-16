@@ -11,7 +11,8 @@ import type {
   CompetitorMonitoringAccountsResponse,
   KnowledgeBaseBuyerFilterGroup,
   KnowledgeBaseBuyerFiltersResponse,
-  McpWorkspace
+  McpWorkspace,
+  SetActiveWorkspaceResult
 } from "../types/index.js";
 
 export class LetterboxClient {
@@ -58,6 +59,23 @@ export class LetterboxClient {
         LetterboxResponse<{ workspaces: McpWorkspace[] }>
       >("/api/v1/social-network/workspaces");
       return response.data.data?.workspaces || [];
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  /**
+   * Switch the workspace subsequent tool calls read. The API re-checks that the
+   * user can still reach the target workspace.
+   */
+  async setActiveWorkspace(
+    publicationId: string
+  ): Promise<SetActiveWorkspaceResult | null> {
+    try {
+      const response = await this.client.post<
+        LetterboxResponse<{ workspace: SetActiveWorkspaceResult }>
+      >("/api/v1/social-network/active-workspace", { publicationId });
+      return response.data.data?.workspace || null;
     } catch (error) {
       this.handleError(error);
     }

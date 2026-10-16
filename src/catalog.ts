@@ -2,7 +2,8 @@
  * Server identity and OAuth resource paths.
  *
  * This server offers one fixed catalog — the competitor monitoring table, its
- * per-account drill-down, the buyer-filter definition, and the workspace list.
+ * per-account drill-down, the buyer-filter definition, and the workspace list
+ * and switch.
  * Nothing on it can contact anyone on a customer's behalf, or arm a sequence
  * that would.
  */
