@@ -318,3 +318,14 @@ test("offers only the three dashboard priority buckets", () => {
     false
   );
 });
+
+test("documents the job-post evidence on every account", () => {
+  for (const tool of [
+    competitorMonitoringTableTool,
+    competitorMonitoringAccountDetailsTool
+  ]) {
+    assert.match(tool.description, /JOB POSTINGS/);
+    assert.match(tool.description, /confirmedCompetitor/);
+    assert.match(tool.description, /confirmedProject/);
+  }
+});
