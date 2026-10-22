@@ -197,6 +197,14 @@ export const BUDGETED_RECOMMENDATION_NOTE =
   "BUDGETED OUTREACH — `recommendedAction` is the outbound channel or channel combination allocated to this contact by the workspace's current weekly email, social-network, and call capacity plan. Use `recommendedChannels.socialNetwork`, `.email`, and `.call` when you need machine-readable booleans instead of parsing the label. An empty `recommendedAction` means no action was allocated to that contact in the current plan (or no current plan is available); never invent an action or interpret the blank as evidence that the person is unreachable or unqualified.";
 
 /**
+ * Job postings are collected once for each newly flagged account (older
+ * accounts only when backfilled) and a workspace can turn collection off, so a
+ * missing block must not read as "this company is not hiring".
+ */
+export const JOB_POSTINGS_NOTE =
+  "JOB POSTINGS — the company's job postings from the last 24 months, each parsed for what it literally says: `competitorsMentioned` (your tracked competitors the posting names, with the quote), `systemsInUse` (software the company runs, is adopting or is moving off), `initiatives` (projects and migrations it describes; `relevantToWorkspace` marks the ones that create a need for what you sell) and `hiringManager` (the person the role reports to, when named — often a member of the wider buying committee). Every quote is copied verbatim from the posting. Postings are collected automatically once for each newly flagged account (older accounts only when backfilled), and a workspace can have collection turned off, so status `not_fetched` means not looked up, not that the company has no postings. Some postings carry only a summary of the description (`source: summary`, versus `source: full_text` for the full posting) and can miss specific systems. Every account also carries `confirmedCompetitor` (the newest job post naming one of your tracked competitors: `name`, the verbatim `quote`, the job post `url`, `title`, `datePosted`) and `confirmedProject` (the newest job post describing a concrete project what you sell would help with: `summary`, `quote`, `url`, `title`, `datePosted`); each is null when no job post qualifies. Cite the `url` as the source when you use either.";
+
+/**
  * GET-10596 — the lead's own email and phone, which the rows now carry so a
  * caller never has to enrich someone this workspace already enriched.
  */
@@ -484,6 +492,34 @@ function labelFromChannels(channels: NormalizedChannels): string {
     .join(" + ");
 }
 
+const JOB_POSTING_SOURCES = ["full_text", "summary"];
+
+/**
+ * A job posting's `source` is an allowlist, like the channel keys: the two
+ * published values pass through, and any other upstream value is published as
+ * `summary`. Claiming less completeness than a posting has is the safe error;
+ * claiming more would let an agent treat a missing system as absent.
+ */
+function normalizeJobPosting(posting: unknown): unknown {
+  const normalizedPosting = normalizeCompetitorMonitoringResponse(posting);
+  if (
+    !normalizedPosting ||
+    typeof normalizedPosting !== "object" ||
+    Array.isArray(normalizedPosting)
+  ) {
+    return normalizedPosting;
+  }
+  const postingFields = normalizedPosting as Record<string, unknown>;
+  if (
+    postingFields.source === undefined ||
+    postingFields.source === null ||
+    JOB_POSTING_SOURCES.includes(postingFields.source as string)
+  ) {
+    return postingFields;
+  }
+  return { ...postingFields, source: "summary" };
+}
+
 /**
  * Keep the competitor-monitoring response aligned with the published
  * vocabulary while preserving every other field returned by the API.
@@ -534,6 +570,11 @@ export function normalizeCompetitorMonitoringResponse<T>(value: T): T {
       if (rebuilt) {
         normalized[key] = rebuilt;
       }
+      continue;
+    }
+
+    if (key === "jobPostings" && Array.isArray(nestedValue)) {
+      normalized[key] = nestedValue.map(normalizeJobPosting);
       continue;
     }
 
