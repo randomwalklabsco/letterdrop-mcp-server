@@ -7,6 +7,7 @@ import {
 } from "../dist/tools/competitor-monitoring-table.js";
 import { competitorMonitoringAccountDetailsTool } from "../dist/tools/competitor-monitoring-account-details.js";
 import { tools, toolHandlers, toolSchemas } from "../dist/tools/index.js";
+import { normalizeCompetitorMonitoringResponse } from "../dist/tools/competitor-monitoring-shared.js";
 import { LETTERDROP_ORCHESTRATION_PLAYBOOK } from "../dist/playbook.js";
 
 function createClient(response) {
@@ -327,5 +328,23 @@ test("documents the job-post evidence on every account", () => {
     assert.match(tool.description, /JOB POSTINGS/);
     assert.match(tool.description, /confirmedCompetitor/);
     assert.match(tool.description, /confirmedProject/);
+    assert.match(tool.description, /`source: full_text`/);
+    assert.match(tool.description, /`source: summary`/);
   }
+});
+
+test("publishes only the neutral job-posting source values", () => {
+  const normalized = normalizeCompetitorMonitoringResponse({
+    jobPostings: [
+      { title: "Full posting", source: "full_text" },
+      { title: "Summary posting", source: "summary" },
+      { title: "Upstream-named posting", source: "some-upstream-provider" },
+      { title: "No source" }
+    ]
+  });
+  assert.deepEqual(
+    normalized.jobPostings.map((posting) => posting.source),
+    ["full_text", "summary", "summary", undefined]
+  );
+  assert.equal(normalized.jobPostings[2].title, "Upstream-named posting");
 });
