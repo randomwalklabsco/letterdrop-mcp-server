@@ -13,6 +13,12 @@ import type {
   KnowledgeBaseBuyerFiltersResponse,
   McpWorkspace
 } from "../types/index.js";
+import {
+  toCompetitorAccountDetailsResponse,
+  toCompetitorAccountsResponse,
+  toCompetitorApiV2DetailsQuery,
+  toCompetitorApiV2SearchBody
+} from "./competitor-monitoring-v2.js";
 
 export class LetterboxClient {
   private client: AxiosInstance;
@@ -44,6 +50,20 @@ export class LetterboxClient {
       if (axiosError.response?.data?.message) {
         throw new Error(axiosError.response.data.message);
       }
+      // API v2 answers errors as { error: { code, message } }.
+      const v2Error = (
+        axiosError.response?.data as
+          | { error?: { code?: string; message?: string } }
+          | undefined
+      )?.error;
+      if (v2Error?.message) {
+        const retryAfter = axiosError.response?.headers?.["retry-after"];
+        throw new Error(
+          axiosError.response?.status === 429 && retryAfter
+            ? `${v2Error.message} (Retry-After: ${retryAfter}s)`
+            : v2Error.message
+        );
+      }
       throw new Error(axiosError.message || "Unknown API error");
     }
     throw error;
@@ -66,6 +86,11 @@ export class LetterboxClient {
   /**
    * Get the account-grouped view of the competitor monitoring table — one row
    * per company, mirroring the in-app table.
+   *
+   * Reads the published Competitor Monitoring API v2 (cached,
+   * rate-limited per workspace) and returns the same payload shape the tools
+   * have always returned. Summary and filter options are their own v2
+   * endpoints, fetched in parallel only when `include` asks for them.
    */
   async getCompetitorMonitoringAccounts(params: {
     limit?: number;
@@ -75,33 +100,45 @@ export class LetterboxClient {
     include?: string[];
     sortField?: string;
     sortOrder?: string;
-    startDate?: string;
-    endDate?: string;
     maxContactsPerAccount?: number;
-    priorityMode?: "display" | "stored";
+    // v2 always reports priority as the dashboard's buckets, which
+    // is what "display" asked v1 for. Kept so callers state the contract.
+    priorityMode?: "display";
   }): Promise<CompetitorMonitoringAccountsResponse> {
+    const include = params.include || [];
+    const wantsSummary =
+      include.includes("summary") || include.includes("summary_details");
+    const wantsFilterOptions = include.includes("filter_options");
+    const searchBody = toCompetitorApiV2SearchBody(params);
     try {
-      const response = await this.client.post<
-        LetterboxResponse<CompetitorMonitoringAccountsResponse>
-      >("/api/v1/social-network/competitor-monitoring-accounts", {
-        ...(params.limit !== undefined ? { limit: params.limit } : {}),
-        ...(params.offset !== undefined ? { offset: params.offset } : {}),
-        ...(params.searchTerm ? { searchTerm: params.searchTerm } : {}),
-        ...(params.filters ? { filters: params.filters } : {}),
-        ...(params.include ? { include: params.include } : {}),
-        ...(params.sortField ? { sortField: params.sortField } : {}),
-        ...(params.sortOrder ? { sortOrder: params.sortOrder } : {}),
-        ...(params.startDate ? { startDate: params.startDate } : {}),
-        ...(params.endDate ? { endDate: params.endDate } : {}),
-        ...(params.maxContactsPerAccount !== undefined
-          ? { maxContactsPerAccount: params.maxContactsPerAccount }
-          : {}),
-        ...(params.priorityMode ? { priorityMode: params.priorityMode } : {})
-      });
-      if (!response.data?.data) {
+      const [search, summary, filterOptions] = await Promise.all([
+        this.client.post(
+          "/api/v2/competitor-monitoring/accounts/search",
+          searchBody
+        ),
+        wantsSummary
+          ? this.client.post("/api/v2/competitor-monitoring/summary", {
+              ...(searchBody.filters ? { filters: searchBody.filters } : {}),
+              ...(searchBody.search ? { search: searchBody.search } : {}),
+              ...(include.includes("summary_details")
+                ? { include_details: true }
+                : {})
+            })
+          : null,
+        wantsFilterOptions
+          ? this.client.get("/api/v2/competitor-monitoring/filter-options")
+          : null
+      ]);
+      if (!search.data?.data) {
         throw new Error("Empty competitor monitoring accounts response");
       }
-      return response.data.data;
+      return toCompetitorAccountsResponse({
+        search: search.data,
+        summary: summary?.data || null,
+        filterOptions: filterOptions?.data || null,
+        limit: Number(searchBody.page_size) || 25,
+        offset: params.offset || 0
+      });
     } catch (error) {
       this.handleError(error);
     }
@@ -111,6 +148,9 @@ export class LetterboxClient {
    * Get everything known about one company in the competitor monitoring table:
    * CRM outreach, the classified activity timeline, signals, opportunities and
    * the extended buying committee.
+   *
+   * v2 addresses an account by id; a domain or name is resolved
+   * with the v2 lookup first. An unknown company is still `{ found: false }`.
    */
   async getCompetitorMonitoringAccountDetails(params: {
     companyKey?: string;
@@ -119,25 +159,44 @@ export class LetterboxClient {
     include?: string[];
     activityLimit?: number;
   }): Promise<CompetitorMonitoringAccountDetailsResponse> {
+    const notFound: CompetitorMonitoringAccountDetailsResponse = {
+      found: false,
+      companyKey: params.companyKey || "",
+      companyName: params.companyName || "",
+      companyDomain: params.companyDomain || ""
+    };
     try {
-      const response = await this.client.post<
-        LetterboxResponse<CompetitorMonitoringAccountDetailsResponse>
-      >("/api/v1/social-network/competitor-monitoring-account-details", {
-        ...(params.companyKey ? { companyKey: params.companyKey } : {}),
-        ...(params.companyDomain
-          ? { companyDomain: params.companyDomain }
-          : {}),
-        ...(params.companyName ? { companyName: params.companyName } : {}),
-        ...(params.include ? { include: params.include } : {}),
-        ...(params.activityLimit !== undefined
-          ? { activityLimit: params.activityLimit }
-          : {})
-      });
+      let accountId = params.companyKey || "";
+      if (!accountId) {
+        const lookup = await this.client.get(
+          "/api/v2/competitor-monitoring/accounts/lookup",
+          {
+            params: {
+              ...(params.companyDomain
+                ? { domain: params.companyDomain }
+                : { name: params.companyName }),
+              // Only the id is needed here; skip the row's blocks.
+              include: ""
+            }
+          }
+        );
+        accountId = lookup.data?.data?.account?.account_id || "";
+        if (!accountId) return notFound;
+      }
+      const response = await this.client.get(
+        `/api/v2/competitor-monitoring/accounts/${encodeURIComponent(accountId)}/details`,
+        {
+          params: toCompetitorApiV2DetailsQuery(params)
+        }
+      );
       if (!response.data?.data) {
         throw new Error("Empty competitor monitoring account details response");
       }
-      return response.data.data;
+      return toCompetitorAccountDetailsResponse(response.data);
     } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        return notFound;
+      }
       this.handleError(error);
     }
   }
