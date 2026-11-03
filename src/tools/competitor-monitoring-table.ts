@@ -17,8 +17,6 @@ import { z } from "zod";
 import type { LetterboxClient } from "../client/letterbox-client.js";
 import {
   ACCOUNT_OWNER_EMAIL_DESCRIPTION,
-  ACTIVITY_TYPES_DESCRIPTION,
-  COMPETITOR_MONITORING_ACTIVITY_TYPES,
   COMPETITOR_MONITORING_BEST_FIT,
   COMPETITOR_MONITORING_EXISTING_ACCOUNT,
   COMPETITOR_MONITORING_FILTER_JSON_SCHEMA,
@@ -71,7 +69,7 @@ const DEFAULT_TABLE_INCLUDES = [
 const DEFAULT_MAX_CONTACTS_PER_ACCOUNT = 100;
 
 const INCLUDE_DESCRIPTION =
-  'Optional: blocks to return. Defaults to the complete contact roster needed for table/CSV/report work: ["contacts","custom_columns","buying_committee"]. "engagements" adds each contact\'s full signal history and the source text behind it; "profile_details" adds role and biography text; "summary" adds the table\'s metric cards (add "summary_details" for the per-deal rows behind them); "filter_options" lists the available deal statuses, account owners and tracked competitors, plus customColumnOptions \u2014 the values each configured custom CRM column actually holds, keyed the same way as the custom_column_values filter. Keep "buying_committee" for any request involving all contacts, decision-makers, the full table, a CSV, or a report.';
+  'Optional: blocks to return. Defaults to the complete contact roster needed for table/CSV/report work: ["contacts","custom_columns","buying_committee"]. Every engaged contact always carries its signal history in `engagements` (post text and biographies are no longer returned, so "engagements" and "profile_details" add nothing); "summary" adds the table\'s metric cards ("summary_details" is accepted but the per-deal rows behind the cards are no longer returned); "filter_options" lists the available deal statuses, account owners and tracked competitors, plus customColumnOptions \u2014 the values each configured custom CRM column actually holds, keyed the same way as the custom_column_values filter. Keep "buying_committee" for any request involving all contacts, decision-makers, the full table, a CSV, or a report.';
 
 export const CompetitorMonitoringTableSchema = z.object({
   limit: z
@@ -143,10 +141,6 @@ export const CompetitorMonitoringTableSchema = z.object({
     .record(z.array(z.string().min(1)))
     .optional()
     .describe(CUSTOM_COLUMN_VALUES_DESCRIPTION),
-  activity_types: z
-    .array(z.enum(COMPETITOR_MONITORING_ACTIVITY_TYPES))
-    .optional()
-    .describe(ACTIVITY_TYPES_DESCRIPTION),
   company_size: z
     .array(z.string().min(1))
     .optional()
