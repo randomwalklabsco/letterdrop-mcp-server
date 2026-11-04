@@ -120,7 +120,7 @@ test("translates the tools' filter vocabulary into v2's parameters and values", 
     ["account_priority", "High"],
     ["account_priority", "Nurture"],
     ["crm_latest_opp_stage", "Discovery"],
-    ["crm_latest_opp_owner_name", "Ann"],
+    ["crm_account_owner_name", "Ann"],
     ["crm_is_customer", "true"],
     ["outreach_status", "reached_out"],
     ["outreach_status", "not_reached_out"],
@@ -241,7 +241,7 @@ test("summary reads every analytics metric, the first alone, and merges them", a
         keys: [
           { key: "account_competitors", values: ["HubSpot"] },
           { key: "crm_latest_opp_stage", values: ["Discovery"] },
-          { key: "crm_latest_opp_owner_name", values: ["Ann"] },
+          { key: "crm_account_owner_name", values: ["Ann"] },
           {
             key: "crm_custom_fields",
             custom_fields: [

@@ -101,7 +101,7 @@ export function toCompetitorApiV2FilterParams(
   else if (dealStatuses.includes(NO_OPPORTUNITY)) add("crm_has_opp", ["false"]);
 
   // v1's `account_owner` has always matched the DEAL owner's name.
-  add("crm_latest_opp_owner_name", asList(filters.account_owner));
+  add("crm_account_owner_name", asList(filters.account_owner));
   add("crm_latest_opp_owner_email", asList(filters.deal_owner_email));
   add("crm_account_owner_email", asList(filters.account_owner_email));
 
@@ -521,7 +521,7 @@ function fromFieldDirectory(data: Row): Row {
     : [];
   return {
     availableDealStatuses: valuesOf("crm_latest_opp_stage").map((status) => ({ status })),
-    availableDealOwners: valuesOf("crm_latest_opp_owner_name"),
+    availableDealOwners: valuesOf("crm_account_owner_name"),
     trackedCompetitorDomains: valuesOf("account_competitors"),
     customColumnOptions: Object.fromEntries(
       customFields.map((field) => [text(field.key), field.values || []])
