@@ -156,6 +156,71 @@ export function toCompetitorApiV2FilterParams(
   return pairs;
 }
 
+// ── Analytics period ─────────────────────────────────────────────────────────
+
+// The table's own window when nothing names a period: its rows cover the last
+// 180 days of signals.
+export const DEFAULT_SUMMARY_PERIOD_DAYS = 180;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const calendarDateOf = (value: unknown) => text(value).match(/^\d{4}-\d{2}-\d{2}/)?.[0] || "";
+const daysBefore = (date: string, days: number) =>
+  new Date(Date.parse(`${date}T00:00:00.000Z`) - days * DAY_MS).toISOString().slice(0, 10);
+
+/**
+ * The period the analytics metrics report on. The API takes explicit dates and
+ * never a rolling window, so the tool always sends two: the summary dates the
+ * caller gave; else the last-activity filter's range (a day count ends today);
+ * else the table's default window, the last 180 days.
+ */
+export function toCompetitorAnalyticsPeriod(
+  params: {
+    summaryStartDate?: string;
+    summaryEndDate?: string;
+    filters?: Record<string, unknown>;
+  },
+  today: string = new Date().toISOString().slice(0, 10)
+): { start_date: string; end_date: string } {
+  const filters = params.filters || {};
+  const withinDays = Number(filters.last_activity_within_days);
+  const rolling = Number.isFinite(withinDays) && withinDays >= 1;
+  const endDate =
+    calendarDateOf(params.summaryEndDate) ||
+    (rolling ? "" : calendarDateOf(filters.last_activity_end_date)) ||
+    today;
+  const startDate =
+    calendarDateOf(params.summaryStartDate) ||
+    (rolling
+      ? daysBefore(today, Math.floor(withinDays))
+      : calendarDateOf(filters.last_activity_start_date)) ||
+    daysBefore(endDate, DEFAULT_SUMMARY_PERIOD_DAYS);
+  return { start_date: startDate, end_date: endDate };
+}
+
+/**
+ * The /api/v2/analytics query: the table's filters, minus the rolling window
+ * the period replaces, plus the period.
+ */
+export function toCompetitorAnalyticsQuery(
+  params: {
+    searchTerm?: string;
+    summaryStartDate?: string;
+    summaryEndDate?: string;
+    filters?: Record<string, unknown>;
+  },
+  today?: string
+): QueryPairs {
+  const period = toCompetitorAnalyticsPeriod(params, today);
+  return [
+    ["start_date", period.start_date],
+    ["end_date", period.end_date],
+    ...toCompetitorApiV2FilterParams(params.filters).filter(
+      ([name]) => name !== "latest_signal_within_days"
+    ),
+    ...(params.searchTerm ? ([["search", params.searchTerm]] as QueryPairs) : [])
+  ];
+}
+
 export interface CompetitorAccountsRequest {
   limit?: number;
   offset?: number;
@@ -206,18 +271,21 @@ export const COMPETITOR_API_V2_METRICS: Record<string, Record<string, string>> =
     deals_after_signal_count: "dealsAfterSignalCount",
     deals_after_signal_pipeline: "dealsAfterSignalPipeline",
     deals_after_signal_account_count: "dealsAfterSignalAccountCount",
-    deals_within_window_count: "dealsWithinWindowCount",
-    deals_within_window_pipeline: "dealsWithinWindowPipeline",
-    deals_within_window_account_count: "dealsWithinWindowAccountCount",
     deals_created_count: "dealsCreatedCount",
     deals_created_pipeline: "dealsCreatedPipeline",
     meetings_after_signal_count: "meetingsAfterSignalCount",
-    meetings_within_window_count: "meetingsWithinWindowCount",
     meetings_created_count: "meetingsCreatedCount",
     attribution_label_counts: "attributionLabelCounts"
   },
+  // A dotted name nests: the coverage fields rebuild one object.
   "pipeline-coverage": {
-    competitor_opportunity_coverage: "competitorOpportunityCoverage"
+    total_open_opportunities: "competitorOpportunityCoverage.totalOpenOpportunities",
+    total_accounts_with_open_opportunities:
+      "competitorOpportunityCoverage.totalAccountsWithOpenOpportunities",
+    opportunity_count: "competitorOpportunityCoverage.opportunityCount",
+    opportunity_percent: "competitorOpportunityCoverage.opportunityPercent",
+    account_count: "competitorOpportunityCoverage.accountCount",
+    account_percent: "competitorOpportunityCoverage.accountPercent"
   },
   "priority-breakdown": {
     total_companies: "totalCompanies",
@@ -235,9 +303,7 @@ export const COMPETITOR_API_V2_METRICS: Record<string, Record<string, string>> =
     booked_opps_high: "bookedOppsHigh",
     booked_opps_all: "bookedOppsAll",
     interceptable_accounts_high: "interceptableAccountsHigh",
-    interceptable_accounts_all: "interceptableAccountsAll",
-    interceptable_window_days: "interceptableWindowDays",
-    interceptable_since_date: "interceptableSinceDate"
+    interceptable_accounts_all: "interceptableAccountsAll"
   },
   "deal-overlap": {
     deal_overlap_count: "dealOverlapCount",
@@ -246,16 +312,11 @@ export const COMPETITOR_API_V2_METRICS: Record<string, Record<string, string>> =
   "confirmed-evaluations": {
     confirmed_evaluations_count: "confirmedEvaluationsCount"
   },
-  "outbound-booking-rate": {
-    cold_outbound_booking_rate: "coldOutboundBookingRate"
-  },
   outreach: {
     outreached_count: "outreachedCount",
     replied_count: "repliedCount",
     outreached_after_signal_count: "outreachedAfterSignalCount",
-    replied_after_signal_count: "repliedAfterSignalCount",
-    outreached_within_window_count: "outreachedWithinWindowCount",
-    replied_within_window_count: "repliedWithinWindowCount"
+    replied_after_signal_count: "repliedAfterSignalCount"
   },
   "win-rate": {
     win_rate_with_signal: "winRateWithSignal",
@@ -499,9 +560,19 @@ export function toCompetitorSummary(metrics: Record<string, V2Envelope | null>):
   const summary: Row = {};
   Object.entries(metrics).forEach(([path, envelope]) => {
     const names = COMPETITOR_API_V2_METRICS[path] || {};
-    Object.entries(envelope?.data || {}).forEach(([published, value]) => {
+    const data = envelope?.data || {};
+    if (data.period && !summary.period) summary.period = toCamelCaseDeep(data.period);
+    Object.entries(data).forEach(([published, value]) => {
       const name = names[published];
-      if (name) summary[name] = toCamelCaseDeep(value);
+      if (!name) return;
+      const [parent, child] = name.split(".");
+      if (!child) {
+        summary[parent] = toCamelCaseDeep(value);
+        return;
+      }
+      const nested = (summary[parent] as Row) || {};
+      nested[child] = toCamelCaseDeep(value);
+      summary[parent] = nested;
     });
   });
   return summary;

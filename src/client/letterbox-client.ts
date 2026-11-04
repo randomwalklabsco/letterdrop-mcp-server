@@ -18,7 +18,7 @@ import {
   toCompetitorAccountDetailsResponse,
   toCompetitorAccountsResponse,
   toCompetitorApiV2AccountsQuery,
-  toCompetitorApiV2FilterParams,
+  toCompetitorAnalyticsQuery,
   toCompetitorDetailReads,
   toQueryString
 } from "./competitor-monitoring-v2.js";
@@ -109,6 +109,10 @@ export class LetterboxClient {
     sortField?: string;
     sortOrder?: string;
     maxContactsPerAccount?: number;
+    // The period the summary metrics cover, YYYY-MM-DD; see
+    // toCompetitorAnalyticsPeriod for what fills in a missing one.
+    summaryStartDate?: string;
+    summaryEndDate?: string;
     // v2 always reports priority as the dashboard's buckets which
     // is what "display" asked v1 for. Kept so callers state the contract.
     priorityMode?: "display";
@@ -148,15 +152,14 @@ export class LetterboxClient {
     }
   }
 
-  /** Every /api/v2/analytics metric for one filter set, keyed by metric. */
+  /** Every /api/v2/analytics metric for one filter set and period, keyed by metric. */
   private async readCompetitorMetrics(params: {
     searchTerm?: string;
+    summaryStartDate?: string;
+    summaryEndDate?: string;
     filters?: Record<string, unknown>;
   }): Promise<Record<string, { data?: Record<string, unknown> } | null>> {
-    const filterQuery = toQueryString([
-      ...toCompetitorApiV2FilterParams(params.filters),
-      ...(params.searchTerm ? ([["search", params.searchTerm]] as Array<[string, string]>) : [])
-    ]);
+    const filterQuery = toQueryString(toCompetitorAnalyticsQuery(params));
     const read = async (metric: string) => {
       const response = await this.client.get(
         `/api/v2/analytics/${metric}${filterQuery ? `?${filterQuery}` : ""}`

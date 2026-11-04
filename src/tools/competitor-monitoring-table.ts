@@ -165,6 +165,20 @@ export const CompetitorMonitoringTableSchema = z.object({
     .string()
     .optional()
     .describe("Optional: ISO datetime upper bound for last activity"),
+  summary_start_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional()
+    .describe(
+      'Optional, with include "summary": first day (YYYY-MM-DD, UTC) of the period the summary metrics cover. Every metric counts only that period. Defaults to the last-activity range when one is set, otherwise 180 days before summary_end_date; the dates used come back as summary.period.'
+    ),
+  summary_end_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional()
+    .describe(
+      'Optional, with include "summary": last day (YYYY-MM-DD, UTC) of the summary period. Defaults to the last-activity end date, otherwise today.'
+    ),
   sort_field: z
     .enum(COMPETITOR_MONITORING_SORT_FIELDS)
     .optional()
@@ -209,6 +223,10 @@ export async function handleCompetitorMonitoringTable(
       include,
       ...(args.sort_field ? { sortField: args.sort_field } : {}),
       ...(args.sort_order ? { sortOrder: args.sort_order } : {}),
+      ...(args.summary_start_date
+        ? { summaryStartDate: args.summary_start_date }
+        : {}),
+      ...(args.summary_end_date ? { summaryEndDate: args.summary_end_date } : {}),
       maxContactsPerAccount:
         args.max_contacts_per_account ?? DEFAULT_MAX_CONTACTS_PER_ACCOUNT,
       // GET-10747 — priority as the dashboard's three buckets, not the stored

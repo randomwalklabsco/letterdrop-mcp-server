@@ -5,8 +5,11 @@ import { LetterboxClient } from "../dist/client/letterbox-client.js";
 import {
   COMPETITOR_API_V2_METRICS,
   fromCompetitorApiV2Account,
+  toCompetitorAnalyticsPeriod,
+  toCompetitorAnalyticsQuery,
   toCompetitorApiV2AccountsQuery,
-  toCompetitorApiV2FilterParams
+  toCompetitorApiV2FilterParams,
+  toCompetitorSummary
 } from "../dist/client/competitor-monitoring-v2.js";
 
 // The competitor tools read the published API v2, which speaks the
@@ -270,7 +273,11 @@ test("summary reads every analytics metric, the first alone, and merges them", a
   assert.deepEqual(fieldsCall.config.params, { object: "account" });
   const metricCalls = http.calls.filter((call) => call.url.startsWith("/api/v2/analytics/"));
   assert.equal(metricCalls.length, Object.keys(COMPETITOR_API_V2_METRICS).length);
-  metricCalls.forEach((call) => assert.equal(queryOf(call.url).get("account_priority"), "High"));
+  metricCalls.forEach((call) => {
+    assert.equal(queryOf(call.url).get("account_priority"), "High");
+    assert.match(queryOf(call.url).get("start_date"), /^\d{4}-\d{2}-\d{2}$/);
+    assert.match(queryOf(call.url).get("end_date"), /^\d{4}-\d{2}-\d{2}$/);
+  });
   assert.deepEqual(data.summary, {
     attributionLabelCounts: { meetings: { direct_reply: 2 }, labelOrder: ["direct_reply"] },
     highConfidenceCount: 3,
@@ -420,4 +427,64 @@ test("a v2 rate limit surfaces its message and Retry-After", async () => {
     clientWith(http).getCompetitorMonitoringAccounts({}),
     /Slow down\. \(Retry-After: 12s\)/
   );
+});
+
+test("analytics always report on two dates, never a rolling window", () => {
+  const today = "2026-11-04";
+  assert.deepEqual(
+    toCompetitorAnalyticsPeriod({ summaryStartDate: "2026-10-01", summaryEndDate: "2026-10-31" }, today),
+    { start_date: "2026-10-01", end_date: "2026-10-31" }
+  );
+  assert.deepEqual(
+    toCompetitorAnalyticsPeriod({ filters: { last_activity_within_days: 30 } }, today),
+    { start_date: "2026-10-05", end_date: "2026-11-04" }
+  );
+  assert.deepEqual(
+    toCompetitorAnalyticsPeriod(
+      {
+        filters: {
+          last_activity_start_date: "2026-08-01T00:00:00.000Z",
+          last_activity_end_date: "2026-09-30T23:59:59.999Z"
+        }
+      },
+      today
+    ),
+    { start_date: "2026-08-01", end_date: "2026-09-30" }
+  );
+  assert.deepEqual(toCompetitorAnalyticsPeriod({}, today), {
+    start_date: "2026-05-08",
+    end_date: "2026-11-04"
+  });
+
+  const query = toCompetitorAnalyticsQuery(
+    { filters: { last_activity_within_days: 30, priority: ["high"] }, searchTerm: "acme" },
+    today
+  );
+  assert.deepEqual(query, [
+    ["start_date", "2026-10-05"],
+    ["end_date", "2026-11-04"],
+    ["account_priority", "High"],
+    ["search", "acme"]
+  ]);
+});
+
+test("the summary carries its period and rebuilds the coverage object", () => {
+  const summary = toCompetitorSummary({
+    "pipeline-coverage": {
+      data: {
+        period: { start_date: "2026-08-01", end_date: "2026-10-31" },
+        total_open_opportunities: 200,
+        opportunity_count: 20,
+        opportunity_percent: 10
+      }
+    }
+  });
+  assert.deepEqual(summary, {
+    period: { startDate: "2026-08-01", endDate: "2026-10-31" },
+    competitorOpportunityCoverage: {
+      totalOpenOpportunities: 200,
+      opportunityCount: 20,
+      opportunityPercent: 10
+    }
+  });
 });
