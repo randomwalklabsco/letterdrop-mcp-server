@@ -235,15 +235,27 @@ test("summary reads every analytics metric, the first alone, and merges them", a
   };
   const http = recordingHttp({
     "GET /api/v2/accounts": ACCOUNTS,
-    "GET /api/v2/filter-options": {
+    "GET /api/v2/fields": {
       data: {
-        account_competitors: ["HubSpot"],
-        crm_latest_opp_stage: ["Discovery"],
-        crm_latest_opp_owner_name: ["Ann"],
-        crm_custom_fields: {
-          definitions: [{ key: "hubspot:company:Tier", crm_type: "hubspot", object_type: "company", name: "Tier", label: "Tier" }],
-          values: { "hubspot:company:Tier": ["A", "B"] }
-        },
+        object: "account",
+        keys: [
+          { key: "account_competitors", values: ["HubSpot"] },
+          { key: "crm_latest_opp_stage", values: ["Discovery"] },
+          { key: "crm_latest_opp_owner_name", values: ["Ann"] },
+          {
+            key: "crm_custom_fields",
+            custom_fields: [
+              {
+                key: "hubspot:company:Tier",
+                crm_type: "hubspot",
+                object_type: "company",
+                name: "Tier",
+                label: "Tier",
+                values: ["A", "B"]
+              }
+            ]
+          }
+        ],
         connected_crms: ["hubspot"]
       }
     },
@@ -254,6 +266,8 @@ test("summary reads every analytics metric, the first alone, and merges them", a
     filters: { priority: ["high"] }
   });
 
+  const fieldsCall = http.calls.find((call) => call.url === "/api/v2/fields");
+  assert.deepEqual(fieldsCall.config.params, { object: "account" });
   const metricCalls = http.calls.filter((call) => call.url.startsWith("/api/v2/analytics/"));
   assert.equal(metricCalls.length, Object.keys(COMPETITOR_API_V2_METRICS).length);
   metricCalls.forEach((call) => assert.equal(queryOf(call.url).get("account_priority"), "High"));

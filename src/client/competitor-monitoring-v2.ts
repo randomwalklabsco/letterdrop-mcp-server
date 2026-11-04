@@ -507,25 +507,31 @@ export function toCompetitorSummary(metrics: Record<string, V2Envelope | null>):
   return summary;
 }
 
-function fromFilterOptions(data: Row): Row {
-  const customFields = (data.crm_custom_fields || {}) as Row;
-  const definitions = Array.isArray(customFields.definitions)
-    ? (customFields.definitions as Row[])
+// GET /api/v2/fields?object=account: every key with its values, the
+// workspace's own (competitors, stages, owners, custom CRM fields) included.
+function fromFieldDirectory(data: Row): Row {
+  const keys = Array.isArray(data.keys) ? (data.keys as Row[]) : [];
+  const valuesOf = (key: string): unknown[] => {
+    const found = keys.find((entry) => entry.key === key);
+    return Array.isArray(found?.values) ? (found.values as unknown[]) : [];
+  };
+  const customFieldsKey = keys.find((entry) => entry.key === "crm_custom_fields");
+  const customFields = Array.isArray(customFieldsKey?.custom_fields)
+    ? (customFieldsKey.custom_fields as Row[])
     : [];
   return {
-    availableDealStatuses: (Array.isArray(data.crm_latest_opp_stage)
-      ? (data.crm_latest_opp_stage as string[])
-      : []
-    ).map((status) => ({ status })),
-    availableDealOwners: data.crm_latest_opp_owner_name || [],
-    trackedCompetitorDomains: data.account_competitors || [],
-    customColumnOptions: customFields.values || {},
-    customColumns: definitions.map((definition) => ({
-      crmType: text(definition.crm_type),
-      objectType: text(definition.object_type),
-      name: text(definition.name),
-      label: text(definition.label),
-      fieldType: text(definition.field_type)
+    availableDealStatuses: valuesOf("crm_latest_opp_stage").map((status) => ({ status })),
+    availableDealOwners: valuesOf("crm_latest_opp_owner_name"),
+    trackedCompetitorDomains: valuesOf("account_competitors"),
+    customColumnOptions: Object.fromEntries(
+      customFields.map((field) => [text(field.key), field.values || []])
+    ),
+    customColumns: customFields.map((field) => ({
+      crmType: text(field.crm_type),
+      objectType: text(field.object_type),
+      name: text(field.name),
+      label: text(field.label),
+      fieldType: text(field.field_type)
     })),
     connectedCrmTypes: data.connected_crms || []
   };
@@ -533,7 +539,7 @@ function fromFilterOptions(data: Row): Row {
 
 /**
  * Reassemble the accounts payload the tools return from v2's /accounts plus
- * the optional analytics and filter-options responses.
+ * the optional analytics and /fields responses.
  */
 export function toCompetitorAccountsResponse({
   accounts,
@@ -553,7 +559,7 @@ export function toCompetitorAccountsResponse({
   offset: number;
 }): CompetitorMonitoringAccountsResponse {
   const rows = Array.isArray(accounts.data?.accounts) ? (accounts.data?.accounts as Row[]) : [];
-  const options = filterOptions?.data ? fromFilterOptions(filterOptions.data) : null;
+  const options = filterOptions?.data ? fromFieldDirectory(filterOptions.data) : null;
   const connectedCrmTypes = (options?.connectedCrmTypes || []) as string[];
   return {
     totalRecords: accounts.pagination?.total ?? 0,

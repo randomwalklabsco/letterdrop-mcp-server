@@ -117,7 +117,7 @@ export class LetterboxClient {
     const wantsSummary =
       include.includes("summary") || include.includes("summary_details");
     const wantsFilterOptions = include.includes("filter_options");
-    // Column definitions live with the filter options in v2.
+    // Column definitions and filter values come from /fields in v2.
     const wantsCustomColumns = include.includes("custom_columns");
     const accountsQuery = toCompetitorApiV2AccountsQuery(params);
     const pageSize = Number(
@@ -128,7 +128,7 @@ export class LetterboxClient {
         this.client.get(`/api/v2/accounts?${toQueryString(accountsQuery)}`),
         wantsSummary ? this.readCompetitorMetrics(params) : null,
         wantsFilterOptions || wantsCustomColumns
-          ? this.client.get("/api/v2/filter-options")
+          ? this.client.get("/api/v2/fields", { params: { object: "account" } })
           : null
       ]);
       if (!accounts.data?.data) {
