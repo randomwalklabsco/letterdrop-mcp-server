@@ -178,18 +178,6 @@ export const ATTRIBUTION_NOTE =
   "ATTRIBUTION — every account carries an `attribution` block answering WHY its meetings and opportunities happened, which the dates alone cannot tell you. `attribution.verdict` is one of: direct_reply (we started the outreach, the prospect replied, the meeting came off that thread); driven (we started the outreach but they came inbound on their own rather than replying, so another channel may hold the last touch); assisted (the signal did not start the outreach, but somebody reached out after it landed — help, not cause); detected (no outreach followed the signal; the prospect surfaced by themselves); competitive_deal (the account was ALREADY being actively worked when the signal landed, so the meeting would likely have happened anyway and the signal cannot be credited); pending_analysis (a qualifying conversion we have not scored yet — a statement about our coverage, not the account). An EMPTY verdict means no claim is being made, either because there was nothing to attribute or because the account is outside the taxonomy (an existing customer, or signals too old to use); never read a blank as 'no attribution was found'. Only direct_reply and driven credit us with causing the meeting: never report assisted or detected as sourced pipeline. `attribution.priorRecentOutreach` is TRI-STATE — true/false when we observed the 30 days before the signal, and NULL when we could not look at all. Null is not false, and treating it as false turns an already-worked account into a claimed one.";
 
 /**
- * `isStale` mirrors the export's "Stale" column, so an agent can tell an aged
- * signal from a fresh one.
- *
- * The trap it creates is specific: staleness deliberately does NOT downgrade
- * `priority` (which keeps the scored history intact), so a stale account
- * still reads `priority: "high"`. A reader that ranks on priority alone will
- * put a months-old signal at the top of an outreach list.
- */
-export const STALE_ACCOUNT_NOTE =
-  "STALENESS — isStale: true means the account's competitor signal has aged past the workspace's measured sales-cycle window, so the cycle it pointed at has most likely resolved. Going stale does NOT change `priority`: a stale account still reports the priority it scored when the signal landed, usually 'high'. Read the two together — treat isStale: true as a reason to deprioritise, verify before acting, or exclude from a 'who should we reach out to now' list — and never rank on priority alone. Current customers are never marked stale.";
-
-/**
  * Explain that the contact recommendation is an allocation from
  * the current weekly capacity plan, rather than another fit or intent score.
  */
