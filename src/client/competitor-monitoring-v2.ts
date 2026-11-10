@@ -171,7 +171,8 @@ const daysBefore = (date: string, days: number) =>
  * The period the analytics metrics report on. The API takes explicit dates and
  * never a rolling window, so the tool always sends two: the summary dates the
  * caller gave; else the last-activity filter's range (a day count ends today);
- * else the table's default window, the last 180 days.
+ * else the table's default window, the last 180 days. Both dates are
+ * inclusive, so an N-day window starts N - 1 days before its end.
  */
 export function toCompetitorAnalyticsPeriod(
   params: {
@@ -191,9 +192,9 @@ export function toCompetitorAnalyticsPeriod(
   const startDate =
     calendarDateOf(params.summaryStartDate) ||
     (rolling
-      ? daysBefore(today, Math.floor(withinDays))
+      ? daysBefore(today, Math.floor(withinDays) - 1)
       : calendarDateOf(filters.last_activity_start_date)) ||
-    daysBefore(endDate, DEFAULT_SUMMARY_PERIOD_DAYS);
+    daysBefore(endDate, DEFAULT_SUMMARY_PERIOD_DAYS - 1);
   return { start_date: startDate, end_date: endDate };
 }
 
@@ -349,23 +350,86 @@ export function toCamelCaseDeep(value: unknown, keepKeys = false): unknown {
 
 const text = (value: unknown) => (typeof value === "string" ? value : "");
 const dateOrNull = (value: unknown) => (typeof value === "string" && value ? value : null);
-const vanityFromUrl = (url: unknown) =>
-  text(url).split(/[?#]/)[0].split("/").filter(Boolean).pop() || "";
+// The profile handle: the /in/ path segment, "" for any other URL shape.
+const vanityFromUrl = (url: unknown) => text(url).match(/\/in\/([^/?#]+)/)?.[1] || "";
 
 // A contact's profile URL and its per-channel recommendation flags carry the
 // channel in their field names. They are read by shape, so this repo names
-// no channel: the one contact_<network>_url field, and every boolean
+// no channel: the contact_<network>_url field, and every boolean
 // recommended_<channel> flag (normalizeRecommendedChannels folds the
-// non-email, non-call ones into socialNetwork).
-const profileUrlOf = (contact: Row) =>
-  text(Object.entries(contact).find(([key]) => /^contact_[a-z]+_url$/.test(key))?.[1]);
+// non-email, non-call ones into socialNetwork). v2 only adds fields, so the
+// shapes skip the Contact fields known not to be a profile or a channel, and
+// keys are read in sorted order so a new match cannot reorder the old ones.
+const NON_PROFILE_URL_KEY_PATTERN = /^contact_(work|phone)_/;
+const NON_CHANNEL_RECOMMENDED_KEYS = new Set(["recommended_channels"]);
+
+/** The Contact keys read as its profile URL, sorted. */
+export function profileUrlKeysOf(contact: Row): string[] {
+  return Object.keys(contact)
+    .filter((key) => /^contact_[a-z]+_url$/.test(key) && !NON_PROFILE_URL_KEY_PATTERN.test(key))
+    .sort();
+}
+
+/** The Contact keys read as recommended-channel flags, sorted. */
+export function recommendedChannelKeysOf(contact: Row): string[] {
+  return Object.keys(contact)
+    .filter(
+      (key) =>
+        key.startsWith("recommended_") &&
+        !NON_CHANNEL_RECOMMENDED_KEYS.has(key) &&
+        typeof contact[key] === "boolean"
+    )
+    .sort();
+}
+
+// A profile URL is the one with a handle; else the first non-empty one.
+const profileUrlOf = (contact: Row) => {
+  const urls = profileUrlKeysOf(contact).map((key) => text(contact[key]));
+  return urls.find((url) => vanityFromUrl(url)) || urls.find(Boolean) || "";
+};
 
 const recommendedChannelsOf = (contact: Row) =>
   Object.fromEntries(
-    Object.entries(contact)
-      .filter(([key, value]) => key.startsWith("recommended_") && typeof value === "boolean")
-      .map(([key, value]) => [key.slice("recommended_".length), value])
+    recommendedChannelKeysOf(contact).map((key) => [
+      key.slice("recommended_".length),
+      contact[key]
+    ])
   );
+
+// Historic is read from the row, never from signal_freshness alone: letterbox
+// reports Stale ahead of Historic, and a signal or contact inherits its
+// account's Stale, so a historic connection on a stale account would read as
+// dated and its scan stamp as a real connection date. A historic signal is
+// the one row with a collected date but no signal_date.
+export function isHistoricV2Signal(signal: Row): boolean {
+  return (
+    signal.signal_freshness === "Historic" ||
+    (!text(signal.signal_date) && Boolean(text(signal.signal_collected_date)))
+  );
+}
+
+const BUYING_COMMITTEE_CONTACT_TYPE = "Buying Committee";
+
+// An engaged contact whose every signal is historic, and whose latest signal
+// date letterbox therefore blanked.
+export function isHistoricV2Contact(contact: Row): boolean {
+  if (contact.contact_type === BUYING_COMMITTEE_CONTACT_TYPE) return false;
+  if (contact.signal_freshness === "Historic") return true;
+  const signals = Array.isArray(contact.signals) ? (contact.signals as Row[]) : [];
+  return !text(contact.contact_latest_signal_date) && signals.every(isHistoricV2Signal);
+}
+
+// The account flag: Historic freshness, or (a stale account, whose freshness
+// hides it) engaged contacts that are all historic.
+function hasOnlyHistoricV2Contacts(account: Row): boolean {
+  if (account.account_signal_freshness === "Historic") return true;
+  const engagedContacts = Array.isArray(account.contacts)
+    ? (account.contacts as Row[]).filter(
+        (contact) => contact.contact_type !== BUYING_COMMITTEE_CONTACT_TYPE
+      )
+    : [];
+  return engagedContacts.length > 0 && engagedContacts.every(isHistoricV2Contact);
+}
 
 // signal_type -> the engagedWith type / engagementType v1 reported.
 function toEngagementKind(signalType: string): { type: string; engagementType: string } {
@@ -390,7 +454,7 @@ function fromSignal(signal: Row): Row {
     ...kind,
     postUrl: text(signal.signal_post_url),
     activityOn: dateOrNull(signal.signal_date) || dateOrNull(signal.signal_collected_date),
-    isHistoric: signal.signal_freshness === "Historic",
+    isHistoric: isHistoricV2Signal(signal),
     summary: text(signal.signal_summary)
   };
 }
@@ -398,7 +462,7 @@ function fromSignal(signal: Row): Row {
 function fromContact(contact: Row, account: Row): Row {
   const signals = Array.isArray(contact.signals) ? (contact.signals as Row[]) : [];
   const latest = signals[0];
-  const isEngaged = contact.contact_type !== "Buying Committee";
+  const isEngaged = contact.contact_type !== BUYING_COMMITTEE_CONTACT_TYPE;
   const profileUrl = profileUrlOf(contact);
   return {
     vanityName: vanityFromUrl(profileUrl),
@@ -430,7 +494,7 @@ function fromContact(contact: Row, account: Row): Row {
     firstEngaged: dateOrNull(contact.contact_first_signal_date),
     lastEngaged: dateOrNull(contact.contact_latest_signal_date),
     lastActivity: latest ? text(latest.signal_summary) : "",
-    isHistoricInitialConnection: contact.signal_freshness === "Historic",
+    isHistoricInitialConnection: isHistoricV2Contact(contact),
     buyingCommitteeRole: text(contact.contact_buying_committee_role),
     contacted: contact.outreach_contacted === true,
     replied: contact.outreach_replied === true,
@@ -498,7 +562,7 @@ export function fromCompetitorApiV2Account(account: Row): Row {
     lastEngaged: dateOrNull(account.latest_signal_date),
     signalDateApproximate: account.first_signal_date_approximate === true,
     lastActivity: text(account.latest_signal_summary),
-    hasOnlyHistoricInitialConnections: freshness === "Historic",
+    hasOnlyHistoricInitialConnections: hasOnlyHistoricV2Contacts(account),
     dealStatus: text(account.crm_latest_opp_stage),
     dealStage: text(account.crm_latest_opp_stage),
     dealPipeline: text(account.crm_latest_opp_pipeline),
@@ -789,7 +853,7 @@ export function toCompetitorAccountDetailsResponse({
               engagementType: kind.engagementType,
               activityOn:
                 dateOrNull(signal.signal_date) || dateOrNull(signal.signal_collected_date),
-              isHistoric: signal.signal_freshness === "Historic"
+              isHistoric: isHistoricV2Signal(signal)
             };
           })
         }

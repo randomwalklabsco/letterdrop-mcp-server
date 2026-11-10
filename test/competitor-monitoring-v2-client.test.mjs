@@ -1,10 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { LetterboxClient } from "../dist/client/letterbox-client.js";
+import {
+  LetterboxClient,
+  toApiV2RetryDelaySeconds
+} from "../dist/client/letterbox-client.js";
 import {
   COMPETITOR_API_V2_METRICS,
   fromCompetitorApiV2Account,
+  profileUrlKeysOf,
+  recommendedChannelKeysOf,
   toCompetitorAnalyticsPeriod,
   toCompetitorAnalyticsQuery,
   toCompetitorApiV2AccountsQuery,
@@ -413,6 +418,128 @@ test("an unknown company is still found:false, not an error", async () => {
   });
 });
 
+test("a router 404 (unknown route, v2 not deployed) is an error, not found:false", async () => {
+  const routeMissing = Object.assign(new Error("Request failed with status code 404"), {
+    isAxiosError: true,
+    response: {
+      status: 404,
+      data: { error: { code: "not_found", message: "No route GET /api/v2/accounts/lookup" } }
+    }
+  });
+  const http = recordingHttp({ "GET /api/v2/accounts/lookup": routeMissing });
+  await assert.rejects(
+    clientWith(http).getCompetitorMonitoringAccountDetails({ companyName: "Acme" }),
+    /No route GET/
+  );
+});
+
+test("a short v2 429 is retried once; a long one, a retried one or a v1 one is not", () => {
+  const rateLimited = ({ retryAfter, url = "/api/v2/accounts", apiV2Retried = false }) =>
+    Object.assign(new Error("Request failed with status code 429"), {
+      isAxiosError: true,
+      config: { url, apiV2Retried },
+      response: { status: 429, headers: { "retry-after": retryAfter } }
+    });
+  assert.equal(toApiV2RetryDelaySeconds(rateLimited({ retryAfter: "12" })), 12);
+  assert.equal(toApiV2RetryDelaySeconds(rateLimited({ retryAfter: "45" })), null);
+  assert.equal(
+    toApiV2RetryDelaySeconds(rateLimited({ retryAfter: "12", apiV2Retried: true })),
+    null
+  );
+  assert.equal(
+    toApiV2RetryDelaySeconds(rateLimited({ retryAfter: "12", url: "/api/v1/other" })),
+    null
+  );
+  assert.equal(toApiV2RetryDelaySeconds(new Error("boom")), null);
+});
+
+test("a stale account's historic signals and contacts still read as historic", () => {
+  const historicContact = {
+    ...V2_ACCOUNT.contacts[0],
+    signal_freshness: "Stale",
+    contact_latest_signal_date: "",
+    signals: [
+      {
+        ...V2_ACCOUNT.contacts[0].signals[0],
+        signal_type: "Connection",
+        signal_freshness: "Stale",
+        signal_date: "",
+        signal_collected_date: "2026-10-30"
+      }
+    ]
+  };
+  const row = fromCompetitorApiV2Account({
+    ...V2_ACCOUNT,
+    account_signal_freshness: "Stale",
+    contacts: [historicContact]
+  });
+  assert.equal(row.isStale, true);
+  assert.equal(row.hasOnlyHistoricInitialConnections, true);
+  assert.equal(row.contacts[0].isHistoricInitialConnection, true);
+  assert.equal(row.contacts[0].engagements[0].isHistoric, true);
+  assert.equal(row.contacts[0].engagements[0].activityOn, "2026-10-30");
+
+  // A dated signal on the same stale account is not historic.
+  const dated = fromCompetitorApiV2Account({ ...V2_ACCOUNT, account_signal_freshness: "Stale" });
+  assert.equal(dated.hasOnlyHistoricInitialConnections, false);
+  assert.equal(dated.contacts[0].isHistoricInitialConnection, false);
+  assert.equal(dated.contacts[0].engagements[0].isHistoric, false);
+});
+
+// The published v2 Contact catalog's field names (the network's own name
+// written as "network"). A new field that matches either shape fails here.
+const V2_CONTACT_CATALOG_FIELDS = [
+  "contact_name",
+  "contact_job_title",
+  "contact_network_url",
+  "contact_work_email",
+  "contact_phone_number",
+  "contact_type",
+  "contact_role",
+  "contact_bucket",
+  "contact_buying_committee_role",
+  "contact_first_signal_date",
+  "contact_latest_signal_date",
+  "signal_freshness",
+  "recommended_channels",
+  "recommended_email",
+  "recommended_network",
+  "recommended_call",
+  "outreach_contacted",
+  "outreach_replied",
+  "outreach_contacted_by_name",
+  "outreach_contacted_by_email",
+  "signals"
+];
+
+test("the Contact catalog has exactly one profile URL and three channel flags", () => {
+  const contact = Object.fromEntries(
+    V2_CONTACT_CATALOG_FIELDS.map((key) => [
+      key,
+      key.startsWith("recommended_") && key !== "recommended_channels" ? true : "x"
+    ])
+  );
+  assert.deepEqual(profileUrlKeysOf(contact), ["contact_network_url"]);
+  assert.deepEqual(recommendedChannelKeysOf(contact), [
+    "recommended_call",
+    "recommended_email",
+    "recommended_network"
+  ]);
+  // Contact info fields of the same shape are never the profile.
+  assert.deepEqual(
+    profileUrlKeysOf({ ...contact, contact_work_url: "https://acme.com", contact_phone_url: "tel:1" }),
+    ["contact_network_url"]
+  );
+});
+
+test("a profile URL without an /in/ handle has no vanity name", () => {
+  const row = fromCompetitorApiV2Account({
+    ...V2_ACCOUNT,
+    contacts: [{ ...V2_ACCOUNT.contacts[0], contact_network_url: "https://profiles.example.com/company/acme" }]
+  });
+  assert.equal(row.contacts[0].vanityName, "");
+});
+
 test("a v2 rate limit surfaces its message and Retry-After", async () => {
   const limited = Object.assign(new Error("Request failed with status code 429"), {
     isAxiosError: true,
@@ -437,7 +564,7 @@ test("analytics always report on two dates, never a rolling window", () => {
   );
   assert.deepEqual(
     toCompetitorAnalyticsPeriod({ filters: { last_activity_within_days: 30 } }, today),
-    { start_date: "2026-10-05", end_date: "2026-11-04" }
+    { start_date: "2026-10-06", end_date: "2026-11-04" }
   );
   assert.deepEqual(
     toCompetitorAnalyticsPeriod(
@@ -452,7 +579,7 @@ test("analytics always report on two dates, never a rolling window", () => {
     { start_date: "2026-08-01", end_date: "2026-09-30" }
   );
   assert.deepEqual(toCompetitorAnalyticsPeriod({}, today), {
-    start_date: "2026-05-08",
+    start_date: "2026-05-09",
     end_date: "2026-11-04"
   });
 
@@ -461,7 +588,7 @@ test("analytics always report on two dates, never a rolling window", () => {
     today
   );
   assert.deepEqual(query, [
-    ["start_date", "2026-10-05"],
+    ["start_date", "2026-10-06"],
     ["end_date", "2026-11-04"],
     ["account_priority", "High"],
     ["search", "acme"]
