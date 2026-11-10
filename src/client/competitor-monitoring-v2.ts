@@ -544,7 +544,6 @@ export function fromCompetitorApiV2Account(account: Row): Row {
       ? [{ primary: true, url: text(account.crm_account_url) }]
       : [],
     competitors: splitCompetitors(account.account_competitors),
-    competitorConnectionCount: account.account_competitor_connection_count ?? 0,
     priority: text(account.account_priority).toLowerCase(),
     isStale: freshness === "Stale",
     isBestFit: account.account_icp_fit === true,
