@@ -17,8 +17,6 @@ import { z } from "zod";
 import type { LetterboxClient } from "../client/letterbox-client.js";
 import {
   ACCOUNT_OWNER_EMAIL_DESCRIPTION,
-  ACTIVITY_TYPES_DESCRIPTION,
-  COMPETITOR_MONITORING_ACTIVITY_TYPES,
   COMPETITOR_MONITORING_BEST_FIT,
   COMPETITOR_MONITORING_EXISTING_ACCOUNT,
   COMPETITOR_MONITORING_FILTER_JSON_SCHEMA,
@@ -71,7 +69,7 @@ const DEFAULT_TABLE_INCLUDES = [
 const DEFAULT_MAX_CONTACTS_PER_ACCOUNT = 100;
 
 const INCLUDE_DESCRIPTION =
-  'Optional: blocks to return. Defaults to the complete contact roster needed for table/CSV/report work: ["contacts","custom_columns","buying_committee"]. "engagements" adds each contact\'s full signal history and the source text behind it; "profile_details" adds role and biography text; "summary" adds the table\'s metric cards (add "summary_details" for the per-deal rows behind them); "filter_options" lists the available deal statuses, account owners and tracked competitors, plus customColumnOptions \u2014 the values each configured custom CRM column actually holds, keyed the same way as the custom_column_values filter. Keep "buying_committee" for any request involving all contacts, decision-makers, the full table, a CSV, or a report.';
+  'Optional: blocks to return. Defaults to the complete contact roster needed for table/CSV/report work: ["contacts","custom_columns","buying_committee"]. Every engaged contact always carries its signal history in `engagements` (post text and biographies are no longer returned, so "engagements" and "profile_details" add nothing); "summary" adds the table\'s metric cards ("summary_details" is accepted but the per-deal rows behind the cards are no longer returned); "filter_options" lists the available deal statuses, account owners and tracked competitors, plus customColumnOptions \u2014 the values each configured custom CRM column actually holds, keyed the same way as the custom_column_values filter. Keep "buying_committee" for any request involving all contacts, decision-makers, the full table, a CSV, or a report.';
 
 export const CompetitorMonitoringTableSchema = z.object({
   limit: z
@@ -143,10 +141,6 @@ export const CompetitorMonitoringTableSchema = z.object({
     .record(z.array(z.string().min(1)))
     .optional()
     .describe(CUSTOM_COLUMN_VALUES_DESCRIPTION),
-  activity_types: z
-    .array(z.enum(COMPETITOR_MONITORING_ACTIVITY_TYPES))
-    .optional()
-    .describe(ACTIVITY_TYPES_DESCRIPTION),
   company_size: z
     .array(z.string().min(1))
     .optional()
@@ -171,6 +165,20 @@ export const CompetitorMonitoringTableSchema = z.object({
     .string()
     .optional()
     .describe("Optional: ISO datetime upper bound for last activity"),
+  summary_start_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional()
+    .describe(
+      'Optional, with include "summary": first day (YYYY-MM-DD, UTC) of the period the summary metrics cover. Every metric counts only that period. Defaults to the last-activity range when one is set, otherwise 180 days before summary_end_date; the dates used come back as summary.period.'
+    ),
+  summary_end_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional()
+    .describe(
+      'Optional, with include "summary": last day (YYYY-MM-DD, UTC) of the summary period. Defaults to the last-activity end date, otherwise today.'
+    ),
   sort_field: z
     .enum(COMPETITOR_MONITORING_SORT_FIELDS)
     .optional()
@@ -215,6 +223,10 @@ export async function handleCompetitorMonitoringTable(
       include,
       ...(args.sort_field ? { sortField: args.sort_field } : {}),
       ...(args.sort_order ? { sortOrder: args.sort_order } : {}),
+      ...(args.summary_start_date
+        ? { summaryStartDate: args.summary_start_date }
+        : {}),
+      ...(args.summary_end_date ? { summaryEndDate: args.summary_end_date } : {}),
       maxContactsPerAccount:
         args.max_contacts_per_account ?? DEFAULT_MAX_CONTACTS_PER_ACCOUNT,
       // GET-10747 — priority as the dashboard's three buckets, not the stored
@@ -258,8 +270,8 @@ export async function handleCompetitorMonitoringTable(
 export const competitorMonitoringTableTool = {
   name: "get_competitor_monitoring_table",
   description:
-    "Fetch the full competitor monitoring table: the single account-grained read behind every competitor-table, all-leads, decision-maker, CSV, export and recommended-outreach question. One row per company, with both contact groups by default — `contacts` are the people the signals came from, `buyingCommittee` the wider decision-makers at the same account. There is no separate per-lead or 'Show buying committee' tool; the committee is part of this response unless `include` drops `buying_committee`. Each person carries `recommendedAction` and `recommendedChannels`, outreach guidance from the workspace's weekly capacity plan rather than an email address or a named sequence; the person's own email and phone are `workEmail`, `personalEmails` and `phone`. Each account also carries its competitors, priority (high/medium/nurture: the dashboard's three outreach buckets; the summary's highConfidenceCount / mediumConfidenceCount / nurtureCount are the dashboard's split), staleness, guessed stage and reasoning, CRM deal status / stage / amount / owner / open and close dates, outreach status and CRM summary, custom CRM columns, signal dates, and contacted/replied state. Supports free-text search, filters, sorting and limit-offset pagination: follow `pagination.hasMore` and `pagination.nextOffset` for the whole dataset, but start at limit 25 and narrow with filters rather than paging deeply, since each page is a full table read. `existingAccount` is null when the CRM lookup was unavailable, which is NOT the same as net-new. " +
-    "`crmCompanies` lists the account's CRM company records with links to HubSpot/Salesforce: `primary` ones are its own record, the rest are other CRM records judged to be the same company (their opportunities already count in the deal fields and opportunityCount; parent and subsidiary companies are never included). `dealMatchedVia` is set when the shown deal sits on one of those other records. " +
+    "Fetch the full competitor monitoring table: the single account-grained read behind every competitor-table, all-leads, decision-maker, CSV, export and recommended-outreach question. One row per company, with both contact groups by default — `contacts` are the people the signals came from, `buyingCommittee` the wider decision-makers at the same account. There is no separate per-lead or 'Show buying committee' tool; the committee is part of this response unless `include` drops `buying_committee`. Each person carries `recommendedAction` and `recommendedChannels`, outreach guidance from the workspace's weekly capacity plan rather than an email address or a named sequence; the person's own email and phone are `workEmail`, `personalEmails` and `phone`. Each account also carries its competitors, priority (high/medium/nurture: the dashboard's three outreach buckets; the summary's highConfidenceCount / mediumConfidenceCount / nurtureCount are the dashboard's split), staleness, guessed stage and reasoning, CRM deal status / stage / amount / owner / open and close dates, outreach status and CRM summary, custom CRM columns, signal dates, and contacted/replied state. Supports free-text search, filters, sorting and limit-offset pagination: follow `pagination.hasMore` and `pagination.nextOffset` for the whole dataset, using limit 100: the first page of a query computes the table and later pages of the same query are served from a short-lived cache, so paging is cheap but each new filter combination is a full table read. Narrow with filters rather than re-querying variations. `existingAccount` is null when the CRM lookup was unavailable, which is NOT the same as net-new. " +
+    "`crmCompanies` lists the account's CRM company records with links to HubSpot/Salesforce: `primary` ones are its own record, the rest are other CRM records judged to be the same company (their opportunities already count in the deal fields and opportunityCount; parent and subsidiary companies are never included). " +
     BUDGETED_RECOMMENDATION_NOTE +
     " " +
     CONTACT_INFO_NOTE +
