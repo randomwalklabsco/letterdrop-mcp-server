@@ -221,6 +221,9 @@ export const COMPETITOR_MONITORING_BEST_FIT = [
 export const BEST_FIT_DESCRIPTION =
   'Optional: "best_fit" returns only accounts our ICP assessment marked a fit, "not_best_fit" only those it did not. Omit for both. Each account carries isBestFit and, when true, bestFitReasoning explaining the call.';
 
+export const VIEWED_ADS_DESCRIPTION =
+  "Optional: true returns only accounts the social network's ads platform showed one of the workspace's Letterdrop ad sets (needs the ads integration connected; otherwise nothing matches). Company-level: the ads platform never says which person saw an ad, and it leaves out companies with very few impressions, so an account without it is not confirmed rather than never shown. Each account carries viewedAds, adsLastShownAt and adImpressions.";
+
 export const CUSTOM_COLUMN_VALUES_DESCRIPTION =
   'Optional: filter on the workspace\'s custom CRM columns. An object of column key to the values to match, e.g. {"salesforce:Account:Industry__c": ["Fintech"]}. Column keys are the same keys that appear in each account\'s customColumnValues; ask for include ["filter_options"] to see the configured columns and the values each one holds. A column that is no longer configured is ignored.';
 
@@ -288,6 +291,10 @@ export const COMPETITOR_MONITORING_FILTER_JSON_SCHEMA = {
     enum: [...COMPETITOR_MONITORING_BEST_FIT],
     description: BEST_FIT_DESCRIPTION
   },
+  viewed_ads: {
+    type: "boolean",
+    description: VIEWED_ADS_DESCRIPTION
+  },
   custom_column_values: {
     type: "object",
     additionalProperties: { type: "array", items: { type: "string" } },
@@ -341,6 +348,7 @@ export interface CompetitorMonitoringFilterArgs {
   attribution?: readonly string[];
   existing_account?: string;
   best_fit?: string;
+  viewed_ads?: boolean;
   custom_column_values?: Record<string, string[]>;
   company_size?: string[];
   location?: string[];
@@ -385,6 +393,7 @@ export function buildCompetitorMonitoringFilters(
       ? { existing_account: args.existing_account }
       : {}),
     ...(args.best_fit ? { best_fit: args.best_fit } : {}),
+    ...(args.viewed_ads === true ? { viewed_ads: true } : {}),
     ...(args.custom_column_values &&
     Object.keys(args.custom_column_values).length
       ? { custom_column_values: args.custom_column_values }

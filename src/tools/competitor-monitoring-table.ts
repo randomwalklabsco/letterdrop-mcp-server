@@ -36,6 +36,7 @@ import {
   BUDGETED_RECOMMENDATION_NOTE,
   CONTACT_INFO_NOTE,
   BEST_FIT_DESCRIPTION,
+  VIEWED_ADS_DESCRIPTION,
   CUSTOM_COLUMN_VALUES_DESCRIPTION,
   EXISTING_ACCOUNT_DESCRIPTION,
   GUESSED_STAGE_NOTE,
@@ -137,6 +138,7 @@ export const CompetitorMonitoringTableSchema = z.object({
     .enum(COMPETITOR_MONITORING_BEST_FIT)
     .optional()
     .describe(BEST_FIT_DESCRIPTION),
+  viewed_ads: z.boolean().optional().describe(VIEWED_ADS_DESCRIPTION),
   custom_column_values: z
     .record(z.array(z.string().min(1)))
     .optional()
