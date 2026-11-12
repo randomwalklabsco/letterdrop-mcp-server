@@ -28,7 +28,7 @@ export const LETTERDROP_ORCHESTRATION_PLAYBOOK = [
 
 Use this playbook when answering questions about which accounts are in a competitor's sales cycle, who at those accounts is involved, and what the CRM says about them.
 
-This connector reads. It cannot contact anyone on the workspace's behalf and it cannot create or run outreach sequences. When a user asks for those, say so plainly and hand back the recommendation instead of attempting it. The one thing it writes is the buyer-filter definition.`,
+This connector reads. It cannot contact anyone on the workspace's behalf and it cannot create or run outreach sequences. When a user asks for those, say so plainly and hand back the recommendation instead of attempting it. The two things it writes are the buyer-filter definition and which of the user's workspaces it reads.`,
   `## Core rules
 
 1. Start from the table. \`get_competitor_monitoring_table\` answers almost every question at the account grain; reach for \`get_competitor_monitoring_account_details\` only once you have a company to drill into.
@@ -55,6 +55,7 @@ This connector reads. It cannot contact anyone on the workspace's behalf and it 
 - \`update_knowledge_base_buyer_filters\` rewrites that definition. It is a write and it changes what every future read of the table returns, so confirm the exact titles with the user first and tell them what it will affect.`,
   `## Workspaces
 
-- \`list_workspaces\` names the workspaces this connection can see. The connection is pinned to the one chosen when it was authorized and this connector cannot switch it, so if the user asks about a different workspace, say that reconnecting is what switches it rather than reporting the wrong workspace's numbers.`,
+- \`list_workspaces\` names the workspaces this connection can see and flags the active one. Every other tool reads the active workspace, so check it before reporting numbers to a user who has more than one.
+- \`set_active_workspace\` switches the active workspace to an id from \`list_workspaces\`, without reconnecting. When the user asks about a different workspace, switch first and say which workspace the answer comes from, rather than reporting the wrong workspace's numbers. The switch lasts until the user switches again or reconnects.`,
   COMPETITOR_MONITORING_SECTION
 ].join("\n\n");

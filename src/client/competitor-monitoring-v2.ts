@@ -126,11 +126,11 @@ export function toCompetitorApiV2FilterParams(
   if (filters.existing_account) {
     add("crm_has_account", [String(filters.existing_account === "existing")]);
   }
-  if (typeof filters.stale === "boolean") {
-    add("account_signal_freshness", filters.stale ? ["Stale"] : ["Recent", "Historic"]);
-  }
   if (filters.best_fit) {
     add("account_icp_fit", [String(filters.best_fit === "best_fit")]);
+  }
+  if (filters.viewed_ads === true) {
+    add("account_viewed_ads", ["true"]);
   }
   if (filters.custom_column_values && typeof filters.custom_column_values === "object") {
     Object.entries(filters.custom_column_values as Record<string, unknown>).forEach(
@@ -403,11 +403,10 @@ const signalRecordedDateOf = (signal: Row) =>
 const signalContentSourceUrlOf = (signal: Row) =>
   signal.signal_content_source_url ?? signal.signal_post_url;
 
-// Historic is read from the row, never from signal_freshness alone: letterbox
-// reports Stale ahead of Historic, and a signal or contact inherits its
-// account's Stale, so a historic connection on a stale account would read as
-// dated and its scan stamp as a real connection date. A historic signal is
-// the one row with a collected date but no signal_date.
+// Historic is read from the row, not only from signal_freshness: a row stored
+// before GET-10857 can still carry Stale in place of Historic, and reading that
+// as dated would turn a scan stamp into a connection date. A historic signal
+// is the one row with a collected date but no signal_date.
 export function isHistoricV2Signal(signal: Row): boolean {
   return (
     signal.signal_freshness === "Historic" ||
@@ -428,8 +427,8 @@ export function isHistoricV2Contact(contact: Row): boolean {
   return !text(contact.contact_latest_signal_date) && signals.every(isHistoricV2Signal);
 }
 
-// The account flag: Historic freshness, or (a stale account, whose freshness
-// hides it) engaged contacts that are all historic.
+// The account flag: Historic freshness, or engaged contacts that are all
+// historic.
 function hasOnlyHistoricV2Contacts(account: Row): boolean {
   if (account.account_signal_freshness === "Historic") return true;
   const engagedContacts = Array.isArray(account.contacts)
@@ -538,7 +537,6 @@ function fromJobPostingsRollup(rollup: Row): Row {
 
 /** One v2 Account -> the account row the tools have always returned. */
 export function fromCompetitorApiV2Account(account: Row): Row {
-  const freshness = text(account.account_signal_freshness);
   const stageLabel = text(account.account_competitor_cycle_stage);
   const hasOpenOpp = account.crm_has_open_opp;
   return {
@@ -556,9 +554,15 @@ export function fromCompetitorApiV2Account(account: Row): Row {
       : [],
     competitors: splitCompetitors(account.account_competitors),
     priority: text(account.account_priority).toLowerCase(),
-    isStale: freshness === "Stale",
     isBestFit: account.account_icp_fit === true,
     bestFitReasoning: text(account.account_icp_fit_reason),
+    viewedAds: account.account_viewed_ads === true,
+    adsLastShownAt:
+      account.account_viewed_ads === true ? dateOrNull(account.account_ads_last_shown_at) : null,
+    adImpressions:
+      account.account_viewed_ads === true && typeof account.account_ad_impressions === "number"
+        ? account.account_ad_impressions
+        : 0,
     confirmedCompetitor: text(account.account_confirmed_competitor) || null,
     confirmedProject: text(account.account_confirmed_project) || null,
     stage: STAGE_CODES[stageLabel] || "",

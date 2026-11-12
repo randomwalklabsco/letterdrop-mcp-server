@@ -28,6 +28,11 @@ import {
   handleListWorkspaces,
   ListWorkspacesSchema
 } from "./list-workspaces.js";
+import {
+  setActiveWorkspaceTool,
+  handleSetActiveWorkspace,
+  SetActiveWorkspaceSchema
+} from "./set-active-workspace.js";
 
 /**
  * Tools that only read. Two things key off this set: the safety annotations
@@ -51,7 +56,8 @@ const toolTitles: Record<string, string> = {
   get_competitor_monitoring_account_details: "Get Competitor Account Details",
   get_knowledge_base_buyer_filters: "Get Buyer Filters",
   update_knowledge_base_buyer_filters: "Update Buyer Filters",
-  list_workspaces: "List Workspaces"
+  list_workspaces: "List Workspaces",
+  set_active_workspace: "Set Active Workspace"
 };
 
 /**
@@ -108,7 +114,8 @@ const baseTools = [
   competitorMonitoringAccountDetailsTool,
   getKnowledgeBaseBuyerFiltersTool,
   updateKnowledgeBaseBuyerFiltersTool,
-  listWorkspacesTool
+  listWorkspacesTool,
+  setActiveWorkspaceTool
 ];
 
 // Export all tool definitions
@@ -121,7 +128,8 @@ export const toolHandlers = {
     handleCompetitorMonitoringAccountDetails,
   get_knowledge_base_buyer_filters: handleGetKnowledgeBaseBuyerFilters,
   update_knowledge_base_buyer_filters: handleUpdateKnowledgeBaseBuyerFilters,
-  list_workspaces: handleListWorkspaces
+  list_workspaces: handleListWorkspaces,
+  set_active_workspace: handleSetActiveWorkspace
 };
 
 // Export all schemas
@@ -131,5 +139,6 @@ export const toolSchemas = {
     CompetitorMonitoringAccountDetailsSchema,
   get_knowledge_base_buyer_filters: GetKnowledgeBaseBuyerFiltersSchema,
   update_knowledge_base_buyer_filters: UpdateKnowledgeBaseBuyerFiltersSchema,
-  list_workspaces: ListWorkspacesSchema
+  list_workspaces: ListWorkspacesSchema,
+  set_active_workspace: SetActiveWorkspaceSchema
 };

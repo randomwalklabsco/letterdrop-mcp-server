@@ -180,10 +180,6 @@ export interface CompetitorMonitoringAccount {
   /** GET-10747 — the dashboard's outreach bucket: high, medium or nurture. */
   priority?: string;
   priorityScore?: number;
-  /** The export's "Stale": the account's signal aged past the
-   *  measured sales-cycle window. `priority` keeps its scored value, so read
-   *  the two together. Always false for a current customer. */
-  isStale?: boolean;
   stage?: string;
   stageLabel?: string;
   subStage?: string;
@@ -294,6 +290,11 @@ export interface McpWorkspace {
   name: string | null;
   domain: string | null;
   isActive: boolean;
+}
+
+export interface SetActiveWorkspaceResult {
+  publicationId: string;
+  name: string | null;
 }
 
 export interface ListWorkspacesResponse {
