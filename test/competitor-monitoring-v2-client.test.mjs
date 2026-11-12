@@ -230,6 +230,64 @@ test("reads signal_recorded_date, signal_content_source_url and Signal Contact",
   assert.equal(String(read.engagements[0].activityOn).slice(0, 10), "2026-10-27");
 });
 
+// Letterbox returned signal_post_url / signal_collected_date / Engaged Contact
+// before the v2 naming review. The tools read the new names first and fall
+// back to those, so either deploy order maps the same row.
+test("an old-name payload and a new-name payload map to the same row", () => {
+  const [contact] = V2_ACCOUNT.contacts;
+  const { signal_recorded_date: _recorded, ...unnamedSignal } = contact.signals[0];
+  const withSignal = (contactFields, signalFields) =>
+    fromCompetitorApiV2Account({
+      ...V2_ACCOUNT,
+      contacts: [
+        { ...contact, ...contactFields, signals: [{ ...unnamedSignal, signal_date: "", ...signalFields }] }
+      ]
+    }).contacts[0];
+  const oldNames = withSignal(
+    { contact_type: "Engaged Contact" },
+    { signal_collected_date: "2026-10-27", signal_post_url: "https://example.com/content/1" }
+  );
+  const newNames = withSignal(
+    { contact_type: "Signal Contact" },
+    { signal_recorded_date: "2026-10-27", signal_content_source_url: "https://example.com/content/1" }
+  );
+  for (const mapped of [oldNames, newNames]) {
+    assert.equal(mapped.contactType, "Engaged Contact");
+    assert.equal(mapped.engagements[0].postUrl, "https://example.com/content/1");
+    assert.equal(String(mapped.engagements[0].activityOn).slice(0, 10), "2026-10-27");
+    assert.equal(mapped.engagements[0].isHistoric, true);
+  }
+});
+
+test("a legacy Stale historic signal with the old date name still reads as historic", () => {
+  const [contact] = V2_ACCOUNT.contacts;
+  const { signal_recorded_date: _recorded, ...unnamedSignal } = contact.signals[0];
+  const row = fromCompetitorApiV2Account({
+    ...V2_ACCOUNT,
+    account_signal_freshness: "Stale",
+    contacts: [
+      {
+        ...contact,
+        signal_freshness: "Stale",
+        contact_latest_signal_date: "",
+        signals: [
+          {
+            ...unnamedSignal,
+            signal_type: "Connection",
+            signal_freshness: "Stale",
+            signal_date: "",
+            signal_collected_date: "2026-10-30"
+          }
+        ]
+      }
+    ]
+  });
+  assert.equal(row.hasOnlyHistoricInitialConnections, true);
+  assert.equal(row.contacts[0].isHistoricInitialConnection, true);
+  assert.equal(row.contacts[0].engagements[0].isHistoric, true);
+  assert.equal(row.contacts[0].engagements[0].activityOn, "2026-10-30");
+});
+
 test("the table read calls GET /api/v2/accounts and returns the tools' shape", async () => {
   const http = recordingHttp({ "GET /api/v2/accounts": ACCOUNTS });
   const data = await clientWith(http).getCompetitorMonitoringAccounts({

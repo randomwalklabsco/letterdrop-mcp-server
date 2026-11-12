@@ -396,6 +396,13 @@ const recommendedChannelsOf = (contact: Row) =>
     ])
   );
 
+// The renamed signal fields, falling back to the names letterbox returned
+// before the v2 naming review, so either deploy order reads both.
+const signalRecordedDateOf = (signal: Row) =>
+  signal.signal_recorded_date ?? signal.signal_collected_date;
+const signalContentSourceUrlOf = (signal: Row) =>
+  signal.signal_content_source_url ?? signal.signal_post_url;
+
 // Historic is read from the row, never from signal_freshness alone: letterbox
 // reports Stale ahead of Historic, and a signal or contact inherits its
 // account's Stale, so a historic connection on a stale account would read as
@@ -404,7 +411,7 @@ const recommendedChannelsOf = (contact: Row) =>
 export function isHistoricV2Signal(signal: Row): boolean {
   return (
     signal.signal_freshness === "Historic" ||
-    (!text(signal.signal_date) && Boolean(text(signal.signal_recorded_date)))
+    (!text(signal.signal_date) && Boolean(text(signalRecordedDateOf(signal))))
   );
 }
 
@@ -454,8 +461,8 @@ function fromSignal(signal: Row): Row {
     jobTitle: text(signal.competitor_rep_title),
     companyName: text(signal.competitor_name),
     ...kind,
-    postUrl: text(signal.signal_content_source_url),
-    activityOn: dateOrNull(signal.signal_date) || dateOrNull(signal.signal_recorded_date),
+    postUrl: text(signalContentSourceUrlOf(signal)),
+    activityOn: dateOrNull(signal.signal_date) || dateOrNull(signalRecordedDateOf(signal)),
     isHistoric: isHistoricV2Signal(signal),
     summary: text(signal.signal_summary)
   };
@@ -855,7 +862,7 @@ export function toCompetitorAccountDetailsResponse({
               signalType: kind.type,
               engagementType: kind.engagementType,
               activityOn:
-                dateOrNull(signal.signal_date) || dateOrNull(signal.signal_recorded_date),
+                dateOrNull(signal.signal_date) || dateOrNull(signalRecordedDateOf(signal)),
               isHistoric: isHistoricV2Signal(signal)
             };
           })
