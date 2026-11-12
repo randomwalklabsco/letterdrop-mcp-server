@@ -71,7 +71,7 @@ const V2_ACCOUNT = {
       contact_job_title: "CFO",
       contact_network_url: "https://profiles.example.com/in/jane-doe",
       contact_work_email: "jane@acme.com",
-      contact_type: "Engaged Contact",
+      contact_type: "Signal Contact",
       contact_role: "champion",
       contact_bucket: "strong",
       signal_freshness: "Recent",
@@ -90,7 +90,7 @@ const V2_ACCOUNT = {
           signal_summary: "Commented on a post by an AE at HubSpot",
           signal_freshness: "Recent",
           signal_date: "2026-10-28",
-          signal_collected_date: "2026-10-28",
+          signal_recorded_date: "2026-10-28",
           competitor_name: "HubSpot",
           competitor_rep_title: "AE"
         }
@@ -206,19 +206,17 @@ test("maps a v2 account back to the row the tools return", () => {
   assert.deepEqual(row.buyingCommittee[0].competitors, ["HubSpot", "G2"]);
 });
 
-test("reads the current field names and contact type, and the earlier ones", () => {
+test("reads signal_recorded_date, signal_content_source_url and Signal Contact", () => {
   const [contact] = V2_ACCOUNT.contacts;
   const [signal] = contact.signals;
-  const { signal_collected_date: _collected, ...currentSignal } = signal;
-  const current = fromCompetitorApiV2Account({
+  const read = fromCompetitorApiV2Account({
     ...V2_ACCOUNT,
     contacts: [
       {
         ...contact,
-        contact_type: "Signal Contact",
         signals: [
           {
-            ...currentSignal,
+            ...signal,
             signal_date: "",
             signal_recorded_date: "2026-10-27",
             signal_content_source_url: "https://example.com/content/1"
@@ -227,11 +225,9 @@ test("reads the current field names and contact type, and the earlier ones", () 
       }
     ]
   }).contacts[0];
-  assert.equal(current.contactType, "Engaged Contact");
-  assert.equal(current.engagements[0].postUrl, "https://example.com/content/1");
-  assert.equal(String(current.engagements[0].activityOn).slice(0, 10), "2026-10-27");
-  const earlier = fromCompetitorApiV2Account(V2_ACCOUNT).contacts[0];
-  assert.equal(earlier.contactType, "Engaged Contact");
+  assert.equal(read.contactType, "Engaged Contact");
+  assert.equal(read.engagements[0].postUrl, "https://example.com/content/1");
+  assert.equal(String(read.engagements[0].activityOn).slice(0, 10), "2026-10-27");
 });
 
 test("the table read calls GET /api/v2/accounts and returns the tools' shape", async () => {
@@ -492,7 +488,7 @@ test("a stale account's historic signals and contacts still read as historic", (
         signal_type: "Connection",
         signal_freshness: "Stale",
         signal_date: "",
-        signal_collected_date: "2026-10-30"
+        signal_recorded_date: "2026-10-30"
       }
     ]
   };
