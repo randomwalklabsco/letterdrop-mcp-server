@@ -206,6 +206,34 @@ test("maps a v2 account back to the row the tools return", () => {
   assert.deepEqual(row.buyingCommittee[0].competitors, ["HubSpot", "G2"]);
 });
 
+test("reads the current field names and contact type, and the earlier ones", () => {
+  const [contact] = V2_ACCOUNT.contacts;
+  const [signal] = contact.signals;
+  const { signal_collected_date: _collected, ...currentSignal } = signal;
+  const current = fromCompetitorApiV2Account({
+    ...V2_ACCOUNT,
+    contacts: [
+      {
+        ...contact,
+        contact_type: "Signal Contact",
+        signals: [
+          {
+            ...currentSignal,
+            signal_date: "",
+            signal_recorded_date: "2026-10-27",
+            signal_content_source_url: "https://example.com/content/1"
+          }
+        ]
+      }
+    ]
+  }).contacts[0];
+  assert.equal(current.contactType, "Engaged Contact");
+  assert.equal(current.engagements[0].postUrl, "https://example.com/content/1");
+  assert.equal(String(current.engagements[0].activityOn).slice(0, 10), "2026-10-27");
+  const earlier = fromCompetitorApiV2Account(V2_ACCOUNT).contacts[0];
+  assert.equal(earlier.contactType, "Engaged Contact");
+});
+
 test("the table read calls GET /api/v2/accounts and returns the tools' shape", async () => {
   const http = recordingHttp({ "GET /api/v2/accounts": ACCOUNTS });
   const data = await clientWith(http).getCompetitorMonitoringAccounts({
