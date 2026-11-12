@@ -396,6 +396,13 @@ const recommendedChannelsOf = (contact: Row) =>
     ])
   );
 
+// The renamed signal fields, falling back to the names letterbox returned
+// before the v2 naming review, so either deploy order reads both.
+const signalRecordedDateOf = (signal: Row) =>
+  signal.signal_recorded_date ?? signal.signal_collected_date;
+const signalContentSourceUrlOf = (signal: Row) =>
+  signal.signal_content_source_url ?? signal.signal_post_url;
+
 // Historic is read from the row, not only from signal_freshness: a row stored
 // before GET-10857 can still carry Stale in place of Historic, and reading that
 // as dated would turn a scan stamp into a connection date. A historic signal
@@ -403,11 +410,13 @@ const recommendedChannelsOf = (contact: Row) =>
 export function isHistoricV2Signal(signal: Row): boolean {
   return (
     signal.signal_freshness === "Historic" ||
-    (!text(signal.signal_date) && Boolean(text(signal.signal_collected_date)))
+    (!text(signal.signal_date) && Boolean(text(signalRecordedDateOf(signal))))
   );
 }
 
 const BUYING_COMMITTEE_CONTACT_TYPE = "Buying Committee";
+const SIGNAL_CONTACT_TYPE = "Signal Contact";
+const ENGAGED_CONTACT_TYPE = "Engaged Contact";
 
 // An engaged contact whose every signal is historic, and whose latest signal
 // date letterbox therefore blanked.
@@ -451,8 +460,8 @@ function fromSignal(signal: Row): Row {
     jobTitle: text(signal.competitor_rep_title),
     companyName: text(signal.competitor_name),
     ...kind,
-    postUrl: text(signal.signal_post_url),
-    activityOn: dateOrNull(signal.signal_date) || dateOrNull(signal.signal_collected_date),
+    postUrl: text(signalContentSourceUrlOf(signal)),
+    activityOn: dateOrNull(signal.signal_date) || dateOrNull(signalRecordedDateOf(signal)),
     isHistoric: isHistoricV2Signal(signal),
     summary: text(signal.signal_summary)
   };
@@ -477,7 +486,9 @@ function fromContact(contact: Row, account: Row): Row {
     phone: text(contact.contact_phone_number),
     recommendedAction: text(contact.recommended_channels),
     recommendedChannels: recommendedChannelsOf(contact),
-    contactType: text(contact.contact_type),
+    // The API's "Signal Contact" is this tool's "Engaged Contact".
+    contactType:
+      contact.contact_type === SIGNAL_CONTACT_TYPE ? ENGAGED_CONTACT_TYPE : text(contact.contact_type),
     hasOwnSignal: isEngaged,
     engagedWith: latest
       ? {
@@ -855,7 +866,7 @@ export function toCompetitorAccountDetailsResponse({
               signalType: kind.type,
               engagementType: kind.engagementType,
               activityOn:
-                dateOrNull(signal.signal_date) || dateOrNull(signal.signal_collected_date),
+                dateOrNull(signal.signal_date) || dateOrNull(signalRecordedDateOf(signal)),
               isHistoric: isHistoricV2Signal(signal)
             };
           })
