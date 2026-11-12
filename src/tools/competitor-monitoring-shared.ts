@@ -62,12 +62,6 @@ export const COMPETITOR_MONITORING_ATTRIBUTION = [
 export const ATTRIBUTION_DESCRIPTION =
   'Optional: filter by the account\'s attribution verdict — WHY its meetings and opportunities happened. Accepted values, strongest claim first: direct_reply (the prospect replied to our outreach and the meeting came off that thread), driven (our outreach started it but they came inbound another way), assisted (the signal did not start the outreach, but somebody reached out after it landed), detected (no outreach followed the signal at all), competitive_deal (the account was already being worked before the signal, so the signal cannot be credited), and "not_attributed" for accounts carrying no claim — either not scored yet, or nothing to attribute';
 
-export const COMPETITOR_MONITORING_ACTIVITY_TYPES = [
-  "like",
-  "comment",
-  "connection"
-] as const;
-
 export const COMPETITOR_MONITORING_EXISTING_ACCOUNT = [
   "existing",
   "net_new"
@@ -100,9 +94,6 @@ export const OUTREACH_STATUS_DESCRIPTION =
 
 export const EXISTING_ACCOUNT_DESCRIPTION =
   'Optional: "existing" (already in your CRM when we found them) or "net_new"';
-
-export const ACTIVITY_TYPES_DESCRIPTION =
-  "Optional: filter by the kind of signal shown on each contact's row. Accepted values: like, comment, connection";
 
 export const ACCOUNT_OWNER_EMAIL_DESCRIPTION =
   "Optional: filter by the CRM account owner's email — the accountOwnerEmail each row reports. Use deal_owner_email for the owner of the CRM opportunity, which is often a different person";
@@ -290,11 +281,6 @@ export const COMPETITOR_MONITORING_FILTER_JSON_SCHEMA = {
     additionalProperties: { type: "array", items: { type: "string" } },
     description: CUSTOM_COLUMN_VALUES_DESCRIPTION
   },
-  activity_types: {
-    type: "array",
-    items: { type: "string", enum: [...COMPETITOR_MONITORING_ACTIVITY_TYPES] },
-    description: ACTIVITY_TYPES_DESCRIPTION
-  },
   company_size: {
     type: "array",
     items: { type: "string" },
@@ -344,7 +330,6 @@ export interface CompetitorMonitoringFilterArgs {
   existing_account?: string;
   best_fit?: string;
   custom_column_values?: Record<string, string[]>;
-  activity_types?: readonly string[];
   company_size?: string[];
   location?: string[];
   last_activity_within_days?: number;
@@ -391,9 +376,6 @@ export function buildCompetitorMonitoringFilters(
     ...(args.custom_column_values &&
     Object.keys(args.custom_column_values).length
       ? { custom_column_values: args.custom_column_values }
-      : {}),
-    ...(args.activity_types?.length
-      ? { activity_types: args.activity_types }
       : {}),
     ...(args.company_size?.length ? { company_size: args.company_size } : {}),
     ...(args.location?.length ? { location: args.location } : {}),
