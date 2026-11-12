@@ -129,6 +129,9 @@ export function toCompetitorApiV2FilterParams(
   if (filters.best_fit) {
     add("account_icp_fit", [String(filters.best_fit === "best_fit")]);
   }
+  if (filters.viewed_ads === true) {
+    add("account_viewed_ads", ["true"]);
+  }
   if (filters.custom_column_values && typeof filters.custom_column_values === "object") {
     Object.entries(filters.custom_column_values as Record<string, unknown>).forEach(
       ([key, values]) => add(`crm_custom_fields[${key}]`, asList(values))
@@ -542,6 +545,13 @@ export function fromCompetitorApiV2Account(account: Row): Row {
     priority: text(account.account_priority).toLowerCase(),
     isBestFit: account.account_icp_fit === true,
     bestFitReasoning: text(account.account_icp_fit_reason),
+    viewedAds: account.account_viewed_ads === true,
+    adsLastShownAt:
+      account.account_viewed_ads === true ? dateOrNull(account.account_ads_last_shown_at) : null,
+    adImpressions:
+      account.account_viewed_ads === true && typeof account.account_ad_impressions === "number"
+        ? account.account_ad_impressions
+        : 0,
     confirmedCompetitor: text(account.account_confirmed_competitor) || null,
     confirmedProject: text(account.account_confirmed_project) || null,
     stage: STAGE_CODES[stageLabel] || "",

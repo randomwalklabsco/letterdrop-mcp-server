@@ -57,6 +57,9 @@ const V2_ACCOUNT = {
   account_priority: "High",
   account_signal_freshness: "Recent",
   account_icp_fit: true,
+  account_viewed_ads: true,
+  account_ads_last_shown_at: "2026-11-09",
+  account_ad_impressions: 1240,
   crm_account_url: "https://crm/acme",
   crm_has_open_opp: true,
   crm_latest_opp_stage: "Discovery",
@@ -118,6 +121,7 @@ test("translates the tools' filter vocabulary into v2's parameters and values", 
     // GET-10857 — a stray stale filter is never forwarded.
     stale: false,
     best_fit: "best_fit",
+    viewed_ads: true,
     custom_column_values: { "hubspot:company:Tier": ["A", "B"] },
     location: ["United States"],
     last_activity_within_days: 30
@@ -135,6 +139,7 @@ test("translates the tools' filter vocabulary into v2's parameters and values", 
     ["outreach_status", "not_reached_out"],
     ["crm_has_account", "false"],
     ["account_icp_fit", "true"],
+    ["account_viewed_ads", "true"],
     ["crm_custom_fields[hubspot:company:Tier]", "A"],
     ["crm_custom_fields[hubspot:company:Tier]", "B"],
     ["company_hq_country", "United States"],
@@ -179,6 +184,10 @@ test("maps a v2 account back to the row the tools return", () => {
   assert.equal(row.stage, "early_stage");
   assert.equal(row.stageLabel, "Early Stage");
   assert.equal(row.isBestFit, true);
+  // GET-10882
+  assert.equal(row.viewedAds, true);
+  assert.equal(row.adImpressions, 1240);
+  assert.ok(row.adsLastShownAt);
   assert.equal(row.dealStatus, "Discovery");
   assert.equal(row.latestOpportunityIsClosed, false);
   assert.equal(row.existingAccount, true);
@@ -614,4 +623,12 @@ test("the summary carries its period and rebuilds the coverage object", () => {
       opportunityPercent: 10
     }
   });
+});
+
+test("viewed_ads false is not a filter, and a row without ads reads as not viewed (GET-10882)", () => {
+  assert.deepEqual(toCompetitorApiV2FilterParams({ viewed_ads: false }), []);
+  const row = fromCompetitorApiV2Account({ ...V2_ACCOUNT, account_viewed_ads: false });
+  assert.equal(row.viewedAds, false);
+  assert.equal(row.adsLastShownAt, null);
+  assert.equal(row.adImpressions, 0);
 });
