@@ -55,7 +55,7 @@ const V2_ACCOUNT = {
   account_competitors: "HubSpot, G2",
   account_competitor_cycle_stage: "Early Stage",
   account_priority: "High",
-  account_signal_freshness: "Stale",
+  account_signal_freshness: "Recent",
   account_icp_fit: true,
   crm_account_url: "https://crm/acme",
   crm_has_open_opp: true,
@@ -115,6 +115,7 @@ test("translates the tools' filter vocabulary into v2's parameters and values", 
     account_owner: ["Ann"],
     outreach_status: ["reached_out", "__no_outreach__", "existing_customer"],
     existing_account: "net_new",
+    // GET-10857 — a stray stale filter is never forwarded.
     stale: false,
     best_fit: "best_fit",
     custom_column_values: { "hubspot:company:Tier": ["A", "B"] },
@@ -133,8 +134,6 @@ test("translates the tools' filter vocabulary into v2's parameters and values", 
     ["outreach_status", "reached_out"],
     ["outreach_status", "not_reached_out"],
     ["crm_has_account", "false"],
-    ["account_signal_freshness", "Recent"],
-    ["account_signal_freshness", "Historic"],
     ["account_icp_fit", "true"],
     ["crm_custom_fields[hubspot:company:Tier]", "A"],
     ["crm_custom_fields[hubspot:company:Tier]", "B"],
@@ -175,7 +174,8 @@ test("maps a v2 account back to the row the tools return", () => {
   assert.equal(row.companyKey, "domain:acme.com");
   assert.deepEqual(row.competitors, ["HubSpot", "G2"]);
   assert.equal(row.priority, "high");
-  assert.equal(row.isStale, true);
+  // GET-10857 — stale is internal-only, so the row carries no staleness.
+  assert.equal("isStale" in row, false);
   assert.equal(row.stage, "early_stage");
   assert.equal(row.stageLabel, "Early Stage");
   assert.equal(row.isBestFit, true);
@@ -453,7 +453,7 @@ test("a short v2 429 is retried once; a long one, a retried one or a v1 one is n
   assert.equal(toApiV2RetryDelaySeconds(new Error("boom")), null);
 });
 
-test("a stale account's historic signals and contacts still read as historic", () => {
+test("a row still carrying a pre-GET-10857 Stale reads its historic signals as historic", () => {
   const historicContact = {
     ...V2_ACCOUNT.contacts[0],
     signal_freshness: "Stale",
@@ -473,13 +473,13 @@ test("a stale account's historic signals and contacts still read as historic", (
     account_signal_freshness: "Stale",
     contacts: [historicContact]
   });
-  assert.equal(row.isStale, true);
+  assert.equal("isStale" in row, false);
   assert.equal(row.hasOnlyHistoricInitialConnections, true);
   assert.equal(row.contacts[0].isHistoricInitialConnection, true);
   assert.equal(row.contacts[0].engagements[0].isHistoric, true);
   assert.equal(row.contacts[0].engagements[0].activityOn, "2026-10-30");
 
-  // A dated signal on the same stale account is not historic.
+  // A dated signal on the same account is not historic.
   const dated = fromCompetitorApiV2Account({ ...V2_ACCOUNT, account_signal_freshness: "Stale" });
   assert.equal(dated.hasOnlyHistoricInitialConnections, false);
   assert.equal(dated.contacts[0].isHistoricInitialConnection, false);

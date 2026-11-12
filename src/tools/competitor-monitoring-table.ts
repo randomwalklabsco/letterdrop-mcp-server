@@ -44,7 +44,6 @@ import {
   PRIORITY_DESCRIPTION,
   SORT_FIELD_DESCRIPTION,
   STAGES_DESCRIPTION,
-  STALE_ACCOUNT_NOTE,
   buildCompetitorMonitoringFilters,
   normalizeCompetitorMonitoringResponse
 } from "./competitor-monitoring-shared.js";
@@ -270,15 +269,13 @@ export async function handleCompetitorMonitoringTable(
 export const competitorMonitoringTableTool = {
   name: "get_competitor_monitoring_table",
   description:
-    "Fetch the full competitor monitoring table: the single account-grained read behind every competitor-table, all-leads, decision-maker, CSV, export and recommended-outreach question. One row per company, with both contact groups by default — `contacts` are the people the signals came from, `buyingCommittee` the wider decision-makers at the same account. There is no separate per-lead or 'Show buying committee' tool; the committee is part of this response unless `include` drops `buying_committee`. Each person carries `recommendedAction` and `recommendedChannels`, outreach guidance from the workspace's weekly capacity plan rather than an email address or a named sequence; the person's own email and phone are `workEmail`, `personalEmails` and `phone`. Each account also carries its competitors, priority (high/medium/nurture: the dashboard's three outreach buckets; the summary's highConfidenceCount / mediumConfidenceCount / nurtureCount are the dashboard's split), staleness, guessed stage and reasoning, CRM deal status / stage / amount / owner / open and close dates, outreach status and CRM summary, custom CRM columns, signal dates, and contacted/replied state. Supports free-text search, filters, sorting and limit-offset pagination: follow `pagination.hasMore` and `pagination.nextOffset` for the whole dataset, using limit 100: the first page of a query computes the table and later pages of the same query are served from a short-lived cache, so paging is cheap but each new filter combination is a full table read. Narrow with filters rather than re-querying variations. `existingAccount` is null when the CRM lookup was unavailable, which is NOT the same as net-new. " +
+    "Fetch the full competitor monitoring table: the single account-grained read behind every competitor-table, all-leads, decision-maker, CSV, export and recommended-outreach question. One row per company, with both contact groups by default — `contacts` are the people the signals came from, `buyingCommittee` the wider decision-makers at the same account. There is no separate per-lead or 'Show buying committee' tool; the committee is part of this response unless `include` drops `buying_committee`. Each person carries `recommendedAction` and `recommendedChannels`, outreach guidance from the workspace's weekly capacity plan rather than an email address or a named sequence; the person's own email and phone are `workEmail`, `personalEmails` and `phone`. Each account also carries its competitors, priority (high/medium/nurture: the dashboard's three outreach buckets; the summary's highConfidenceCount / mediumConfidenceCount / nurtureCount are the dashboard's split), guessed stage and reasoning, CRM deal status / stage / amount / owner / open and close dates, outreach status and CRM summary, custom CRM columns, signal dates, and contacted/replied state. Supports free-text search, filters, sorting and limit-offset pagination: follow `pagination.hasMore` and `pagination.nextOffset` for the whole dataset, using limit 100: the first page of a query computes the table and later pages of the same query are served from a short-lived cache, so paging is cheap but each new filter combination is a full table read. Narrow with filters rather than re-querying variations. `existingAccount` is null when the CRM lookup was unavailable, which is NOT the same as net-new. " +
     "`crmCompanies` lists the account's CRM company records with links to HubSpot/Salesforce: `primary` ones are its own record, the rest are other CRM records judged to be the same company (their opportunities already count in the deal fields and opportunityCount; parent and subsidiary companies are never included). " +
     BUDGETED_RECOMMENDATION_NOTE +
     " " +
     CONTACT_INFO_NOTE +
     " " +
     GUESSED_STAGE_NOTE +
-    " " +
-    STALE_ACCOUNT_NOTE +
     " " +
     ATTRIBUTION_NOTE +
     " " +
