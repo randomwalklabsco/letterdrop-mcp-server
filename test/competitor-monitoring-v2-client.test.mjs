@@ -297,6 +297,44 @@ test("a legacy Stale historic signal with the old date name still reads as histo
   assert.equal(row.contacts[0].engagements[0].activityOn, "2026-10-30");
 });
 
+test("GET-10915: a row with only the new names reads the same as the old ones", () => {
+  const [contact] = V2_ACCOUNT.contacts;
+  const { contact_bucket: _bucket, signal_freshness: _contactFreshness, ...renamedContact } =
+    contact;
+  const {
+    signal_freshness: _signalFreshness,
+    signal_recorded_date: _recorded,
+    ...renamedSignal
+  } = contact.signals[0];
+  const { account_signal_freshness: _accountFreshness, ...renamedAccount } = V2_ACCOUNT;
+  const row = fromCompetitorApiV2Account({
+    ...renamedAccount,
+    account_is_past_signal: true,
+    contacts: [
+      {
+        ...renamedContact,
+        contact_fit: "Potential fit",
+        is_past_signal: true,
+        contact_latest_signal_date: "",
+        signals: [
+          {
+            ...renamedSignal,
+            signal_type: "Connection",
+            is_past_signal: true,
+            signal_date: "",
+            signal_collected_date: "2026-10-30"
+          }
+        ]
+      }
+    ]
+  });
+  assert.equal(row.hasOnlyHistoricInitialConnections, true);
+  assert.equal(row.contacts[0].contactBucket, "potential");
+  assert.equal(row.contacts[0].isHistoricInitialConnection, true);
+  assert.equal(row.contacts[0].engagements[0].isHistoric, true);
+  assert.equal(row.contacts[0].engagements[0].activityOn, "2026-10-30");
+});
+
 test("the table read calls GET /api/v2/accounts and returns the tools' shape", async () => {
   const http = recordingHttp({ "GET /api/v2/accounts": ACCOUNTS });
   const data = await clientWith(http).getCompetitorMonitoringAccounts({

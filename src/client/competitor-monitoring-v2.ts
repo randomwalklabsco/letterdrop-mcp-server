@@ -398,8 +398,9 @@ const recommendedChannelsOf = (contact: Row) =>
 
 // The renamed signal fields, falling back to the names letterbox returned
 // before the v2 naming review, so either deploy order reads both.
+// GET-10915 — signal_collected_date is the current name again.
 const signalRecordedDateOf = (signal: Row) =>
-  signal.signal_recorded_date ?? signal.signal_collected_date;
+  signal.signal_collected_date ?? signal.signal_recorded_date;
 const signalContentSourceUrlOf = (signal: Row) =>
   signal.signal_content_source_url ?? signal.signal_post_url;
 
@@ -409,10 +410,21 @@ const signalContentSourceUrlOf = (signal: Row) =>
 // is the one row with a collected date but no signal_date.
 export function isHistoricV2Signal(signal: Row): boolean {
   return (
+    signal.is_past_signal === true ||
     signal.signal_freshness === "Historic" ||
     (!text(signal.signal_date) && Boolean(text(signalRecordedDateOf(signal))))
   );
 }
+
+// GET-10915 — contact_fit (the app's Fit label) replaced contact_bucket; the
+// tool output keeps the bucket code it always reported.
+const CONTACT_BUCKET_BY_FIT: Record<string, string> = {
+  "Strong fit": "strong",
+  "Potential fit": "potential",
+  "Do not contact": "weak"
+};
+const contactBucketOf = (contact: Row) =>
+  CONTACT_BUCKET_BY_FIT[text(contact.contact_fit)] ?? contact.contact_bucket ?? null;
 
 const BUYING_COMMITTEE_CONTACT_TYPE = "Buying Committee";
 const SIGNAL_CONTACT_TYPE = "Signal Contact";
@@ -422,7 +434,7 @@ const ENGAGED_CONTACT_TYPE = "Engaged Contact";
 // date letterbox therefore blanked.
 export function isHistoricV2Contact(contact: Row): boolean {
   if (contact.contact_type === BUYING_COMMITTEE_CONTACT_TYPE) return false;
-  if (contact.signal_freshness === "Historic") return true;
+  if (contact.is_past_signal === true || contact.signal_freshness === "Historic") return true;
   const signals = Array.isArray(contact.signals) ? (contact.signals as Row[]) : [];
   return !text(contact.contact_latest_signal_date) && signals.every(isHistoricV2Signal);
 }
@@ -430,7 +442,9 @@ export function isHistoricV2Contact(contact: Row): boolean {
 // The account flag: Historic freshness, or engaged contacts that are all
 // historic.
 function hasOnlyHistoricV2Contacts(account: Row): boolean {
-  if (account.account_signal_freshness === "Historic") return true;
+  if (account.account_is_past_signal === true || account.account_signal_freshness === "Historic") {
+    return true;
+  }
   const engagedContacts = Array.isArray(account.contacts)
     ? (account.contacts as Row[]).filter(
         (contact) => contact.contact_type !== BUYING_COMMITTEE_CONTACT_TYPE
@@ -478,7 +492,7 @@ function fromContact(contact: Row, account: Row): Row {
     profileUrl,
     jobTitle: text(contact.contact_job_title),
     contactRole: contact.contact_role ?? null,
-    contactBucket: contact.contact_bucket ?? null,
+    contactBucket: contactBucketOf(contact),
     companyName: text(account.company_name),
     companyDomain: text(account.company_domain),
     workEmail: text(contact.contact_work_email),
