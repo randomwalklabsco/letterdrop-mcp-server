@@ -309,18 +309,18 @@ test("GET-10915: a row with only the new names reads the same as the old ones", 
   const { account_signal_freshness: _accountFreshness, ...renamedAccount } = V2_ACCOUNT;
   const row = fromCompetitorApiV2Account({
     ...renamedAccount,
-    account_is_past_signal: true,
+    account_signal_is_historic: true,
     contacts: [
       {
         ...renamedContact,
         contact_fit: "Potential fit",
-        is_past_signal: true,
+        signal_is_historic: true,
         contact_latest_signal_date: "",
         signals: [
           {
             ...renamedSignal,
             signal_type: "Connection",
-            is_past_signal: true,
+            signal_is_historic: true,
             signal_date: "",
             signal_collected_date: "2026-10-30"
           }

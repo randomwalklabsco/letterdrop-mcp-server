@@ -410,7 +410,7 @@ const signalContentSourceUrlOf = (signal: Row) =>
 // is the one row with a collected date but no signal_date.
 export function isHistoricV2Signal(signal: Row): boolean {
   return (
-    signal.is_past_signal === true ||
+    signal.signal_is_historic === true ||
     signal.signal_freshness === "Historic" ||
     (!text(signal.signal_date) && Boolean(text(signalRecordedDateOf(signal))))
   );
@@ -434,7 +434,7 @@ const ENGAGED_CONTACT_TYPE = "Engaged Contact";
 // date letterbox therefore blanked.
 export function isHistoricV2Contact(contact: Row): boolean {
   if (contact.contact_type === BUYING_COMMITTEE_CONTACT_TYPE) return false;
-  if (contact.is_past_signal === true || contact.signal_freshness === "Historic") return true;
+  if (contact.signal_is_historic === true || contact.signal_freshness === "Historic") return true;
   const signals = Array.isArray(contact.signals) ? (contact.signals as Row[]) : [];
   return !text(contact.contact_latest_signal_date) && signals.every(isHistoricV2Signal);
 }
@@ -442,7 +442,7 @@ export function isHistoricV2Contact(contact: Row): boolean {
 // The account flag: Historic freshness, or engaged contacts that are all
 // historic.
 function hasOnlyHistoricV2Contacts(account: Row): boolean {
-  if (account.account_is_past_signal === true || account.account_signal_freshness === "Historic") {
+  if (account.account_signal_is_historic === true || account.account_signal_freshness === "Historic") {
     return true;
   }
   const engagedContacts = Array.isArray(account.contacts)
