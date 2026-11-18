@@ -35,6 +35,7 @@ import {
   BUYING_COMMITTEE_NOTE,
   BUDGETED_RECOMMENDATION_NOTE,
   CONTACT_INFO_NOTE,
+  JOB_POSTINGS_NOTE,
   BEST_FIT_DESCRIPTION,
   VIEWED_ADS_DESCRIPTION,
   CUSTOM_COLUMN_VALUES_DESCRIPTION,
@@ -57,7 +58,8 @@ const ACCOUNT_INCLUDES = [
   "summary",
   "summary_details",
   "filter_options",
-  "buying_committee"
+  "buying_committee",
+  "job_postings"
 ] as const;
 
 const DEFAULT_TABLE_INCLUDES = [
@@ -69,7 +71,7 @@ const DEFAULT_TABLE_INCLUDES = [
 const DEFAULT_MAX_CONTACTS_PER_ACCOUNT = 100;
 
 const INCLUDE_DESCRIPTION =
-  'Optional: blocks to return. Defaults to the complete contact roster needed for table/CSV/report work: ["contacts","custom_columns","buying_committee"]. Every engaged contact always carries its signal history in `engagements` (post text and biographies are no longer returned, so "engagements" and "profile_details" add nothing); "summary" adds the table\'s metric cards ("summary_details" is accepted but the per-deal rows behind the cards are no longer returned); "filter_options" lists the available deal statuses, account owners and tracked competitors, plus customColumnOptions \u2014 the values each configured custom CRM column actually holds, keyed the same way as the custom_column_values filter. Keep "buying_committee" for any request involving all contacts, decision-makers, the full table, a CSV, or a report.';
+  'Optional: blocks to return. Defaults to the complete contact roster needed for table/CSV/report work: ["contacts","custom_columns","buying_committee"]. Every engaged contact always carries its signal history in `engagements` (post text and biographies are no longer returned, so "engagements" and "profile_details" add nothing); "summary" adds the table\'s metric cards ("summary_details" is accepted but the per-deal rows behind the cards are no longer returned); "filter_options" lists the available deal statuses, account owners and tracked competitors, plus customColumnOptions \u2014 the values each configured custom CRM column actually holds, keyed the same way as the custom_column_values filter. "job_postings" adds a per-account `jobPostings` rollup (posting count, latest date, competitors the postings name, systems in use, relevant initiatives); fetch the postings themselves with get_competitor_monitoring_account_details. Keep "buying_committee" for any request involving all contacts, decision-makers, the full table, a CSV, or a report.';
 
 export const CompetitorMonitoringTableSchema = z.object({
   limit: z
@@ -276,6 +278,8 @@ export const competitorMonitoringTableTool = {
     BUDGETED_RECOMMENDATION_NOTE +
     " " +
     CONTACT_INFO_NOTE +
+    " " +
+    JOB_POSTINGS_NOTE +
     " " +
     GUESSED_STAGE_NOTE +
     " " +
