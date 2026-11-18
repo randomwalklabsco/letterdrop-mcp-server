@@ -4,13 +4,14 @@ A [Model Context Protocol](https://modelcontextprotocol.io) server for Letterdro
 
 ## Tools
 
-| Tool                                        | Access | What it does                                                                                                                                                                                            |
-| ------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tool                                        | Access | What it does                                                                                                                                                                                                              |
+| ------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `get_competitor_monitoring_table`           | read   | The full competitor monitoring table, one row per company: the contacts the signals came from, buying committee, recommended outreach, CRM deal fields, custom columns. Supports search, filters, sorting and pagination. |
-| `get_competitor_monitoring_account_details` | read   | Everything known about one company: CRM outreach rollup, activity timeline, competitor signals, opportunities and the buying committee.                                                                 |
-| `get_knowledge_base_buyer_filters`          | read   | The workspace's buyer definition: company filters, decision-maker titles, individual-contributor titles.                                                                                                |
-| `update_knowledge_base_buyer_filters`       | write  | Replaces that buyer definition. Needs the `mcp.write` scope.                                                                                                                                            |
-| `list_workspaces`                           | read   | The workspaces this connector can see, with the active one flagged.                                                                                                                                 |
+| `get_competitor_monitoring_account_details` | read   | Everything known about one company: CRM outreach rollup, activity timeline, competitor signals, opportunities and the buying committee.                                                                                   |
+| `get_knowledge_base_buyer_filters`          | read   | The workspace's buyer definition: company filters, decision-maker titles, individual-contributor titles.                                                                                                                  |
+| `update_knowledge_base_buyer_filters`       | write  | Replaces that buyer definition. Needs the `mcp.write` scope.                                                                                                                                                              |
+| `list_workspaces`                           | read   | The workspaces this connector can see, with the active one flagged.                                                                                                                                                       |
+| `set_active_workspace`                      | write  | Switches which workspace the other tools read, without reconnecting. Needs the `mcp.write` scope.                                                                                                                         |
 
 The server also publishes one prompt and one resource (`letterdrop://guides/orchestration-playbook`) explaining how to use these tools together.
 
