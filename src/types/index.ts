@@ -31,6 +31,7 @@ export interface KnowledgeBaseBuyerFiltersResponse {
   companyFilters: KnowledgeBaseCompanyFilterGroup;
   decisionMakers: KnowledgeBaseBuyerFilterGroup;
   individualContributors: KnowledgeBaseBuyerFilterGroup;
+  fullBuyingCommittee?: KnowledgeBaseBuyerFilterGroup;
   activeIndividualFilterTab: "aboveTheLine" | "belowTheLine" | string;
   buyerFilters?: Record<string, unknown>;
 }
