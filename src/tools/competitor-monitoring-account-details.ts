@@ -18,6 +18,7 @@ import {
   BUYING_COMMITTEE_ABSENCE_NOTE,
   BUYING_COMMITTEE_NOTE,
   CONTACT_INFO_NOTE,
+  JOB_POSTINGS_NOTE,
   HISTORIC_CONNECTION_NOTE,
   normalizeCompetitorMonitoringResponse
 } from "./competitor-monitoring-shared.js";
@@ -27,7 +28,8 @@ const DETAIL_INCLUDES = [
   "activity",
   "signals",
   "opportunities",
-  "buying_committee"
+  "buying_committee",
+  "job_postings"
 ] as const;
 
 export const CompetitorMonitoringAccountDetailsSchema = z
@@ -57,7 +59,7 @@ export const CompetitorMonitoringAccountDetailsSchema = z
       .array(z.enum(DETAIL_INCLUDES))
       .optional()
       .describe(
-        'Optional: which blocks to return. Defaults to all of them. "outreach" = the CRM rollup and per-contact outreach records; "activity" = the recent activity timeline with reply classification; "signals" = the competitor signals we surfaced; "opportunities" = live CRM deals; "buying_committee" = decision-makers found at the account beyond the people the signals came from.'
+        'Optional: which blocks to return. Defaults to all of them. "outreach" = the CRM rollup and per-contact outreach records; "activity" = the recent activity timeline with reply classification; "signals" = the competitor signals we surfaced; "opportunities" = live CRM deals; "buying_committee" = decision-makers found at the account beyond the people the signals came from; "job_postings" = `jobPostingsSummary` plus up to 50 parsed `jobPostings` from the last 24 months.'
       ),
     activity_limit: z
       .number()
@@ -120,7 +122,9 @@ export const competitorMonitoringAccountDetailsTool = {
     " " +
     BUYING_COMMITTEE_ABSENCE_NOTE +
     " " +
-    CONTACT_INFO_NOTE,
+    CONTACT_INFO_NOTE +
+    " " +
+    JOB_POSTINGS_NOTE,
   inputSchema: {
     type: "object",
     properties: {
@@ -143,7 +147,7 @@ export const competitorMonitoringAccountDetailsTool = {
         type: "array",
         items: { type: "string", enum: [...DETAIL_INCLUDES] },
         description:
-          'Optional: which blocks to return. Defaults to all of them. "outreach" = the CRM rollup and per-contact outreach records; "activity" = the recent activity timeline with reply classification; "signals" = the competitor signals we surfaced; "opportunities" = live CRM deals; "buying_committee" = decision-makers found at the account beyond the people the signals came from.'
+          'Optional: which blocks to return. Defaults to all of them. "outreach" = the CRM rollup and per-contact outreach records; "activity" = the recent activity timeline with reply classification; "signals" = the competitor signals we surfaced; "opportunities" = live CRM deals; "buying_committee" = decision-makers found at the account beyond the people the signals came from; "job_postings" = `jobPostingsSummary` plus up to 50 parsed `jobPostings` from the last 24 months.'
       },
       activity_limit: {
         type: "number",
