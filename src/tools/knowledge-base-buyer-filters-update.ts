@@ -21,6 +21,23 @@ const NamedOptionSchema = z.object({
 
 const MixedNamedOptionSchema = z.union([z.string().min(1), NamedOptionSchema]);
 
+// A size the model writes itself must be one of the options. A size sent as
+// an object is accepted as read from get_knowledge_base_buyer_filters (which
+// returns {name, value}), so reading the list and sending it back with one
+// addition works; letterbox validates those, accepting what is already stored.
+const CompanySizeOptionSchema = z.union([
+  z.enum(KNOWLEDGE_BASE_COMPANY_SIZES),
+  z.object({
+    name: z.string().min(1),
+    value: z.string().optional()
+  })
+]);
+
+const COMPANY_SIZE_DESCRIPTION = `Company sizes (employee-count ranges): ${KNOWLEDGE_BASE_COMPANY_SIZES.join(", ")}. Entries read back from get_knowledge_base_buyer_filters as {name, value} objects can be sent back as they are.`;
+
+const FULL_BUYING_COMMITTEE_DESCRIPTION =
+  "Full Buying Committee tab. Send it only when the user is editing the committee: it is generated in the background, and a committee sent here is kept as the user's edit from then on, so sending back a stale copy can overwrite a newer generated one.";
+
 const LOCATION_DESCRIPTION =
   'Countries, as names ("United States") or ISO 3166-1 alpha-2 codes ("US"). Unrecognized countries are rejected.';
 
@@ -45,9 +62,9 @@ const BuyerFilterGroupSchema = z.object({
 
 const CompanyFilterGroupSchema = z.object({
   company_sizes: z
-    .array(z.enum(KNOWLEDGE_BASE_COMPANY_SIZES))
+    .array(CompanySizeOptionSchema)
     .optional()
-    .describe("Company sizes (employee-count ranges)"),
+    .describe(COMPANY_SIZE_DESCRIPTION),
   industries: z
     .array(MixedNamedOptionSchema)
     .optional()
@@ -77,7 +94,7 @@ export const UpdateKnowledgeBaseBuyerFiltersSchema = z
     individual_contributors:
       BuyerFilterGroupSchema.optional().describe("End Users tab"),
     full_buying_committee: BuyerFilterGroupSchema.optional().describe(
-      "Full Buying Committee tab"
+      FULL_BUYING_COMMITTEE_DESCRIPTION
     ),
     active_tab: z
       .enum(["aboveTheLine", "belowTheLine"])
@@ -245,8 +262,20 @@ export const updateKnowledgeBaseBuyerFiltersTool = {
         properties: {
           company_sizes: {
             type: "array",
-            description: "Company sizes (employee-count ranges)",
-            items: { type: "string", enum: [...KNOWLEDGE_BASE_COMPANY_SIZES] }
+            description: COMPANY_SIZE_DESCRIPTION,
+            items: {
+              anyOf: [
+                { type: "string", enum: [...KNOWLEDGE_BASE_COMPANY_SIZES] },
+                {
+                  type: "object",
+                  properties: {
+                    name: { type: "string" },
+                    value: { type: "string" }
+                  },
+                  required: ["name"]
+                }
+              ]
+            }
           },
           industries: {
             type: "array",
@@ -269,7 +298,7 @@ export const updateKnowledgeBaseBuyerFiltersTool = {
       decision_makers: buyerFilterGroupJsonSchema("Decision Makers tab"),
       individual_contributors: buyerFilterGroupJsonSchema("End Users tab"),
       full_buying_committee: buyerFilterGroupJsonSchema(
-        "Full Buying Committee tab"
+        FULL_BUYING_COMMITTEE_DESCRIPTION
       ),
       active_tab: {
         type: "string",

@@ -51,8 +51,8 @@ This connector reads. It cannot contact anyone on the workspace's behalf and it 
 - \`activity_limit\` caps the timeline, newest first. \`totalActivities\` always reports the untruncated count, so say when you are looking at a slice.`,
   `## Buyer filters
 
-- \`get_knowledge_base_buyer_filters\` returns the workspace's definition of a buyer: the company filters, the decision-maker titles and the individual-contributor titles. That definition is what decides who appears as a buying-committee member on the table's rows, so read it before explaining why someone is or is not in a committee.
-- \`update_knowledge_base_buyer_filters\` rewrites that definition. It is a write and it changes what every future read of the table returns, so confirm the exact titles with the user first and tell them what it will affect.`,
+- \`get_knowledge_base_buyer_filters\` returns the workspace's definition of a buyer: the company filters and three tabs of job-title keywords, seniorities and locations — decision makers, end users (individual contributors) and the Full Buying Committee. That definition is what decides who appears as a buying-committee member on the table's rows, so read it before explaining why someone is or is not in a committee.
+- \`update_knowledge_base_buyer_filters\` edits that definition list by list: within each group you send, a list you include replaces the stored list and a list you leave out is kept. To add one keyword, read the current list and send it back with the addition. The Full Buying Committee tab is editable too, but send it only when the user is changing the committee — it is generated in the background, and a committee you send is kept as the user's edit. It is a write and it changes what every future read of the table returns, so confirm the exact change with the user first and tell them what it will affect.`,
   `## Workspaces
 
 - \`list_workspaces\` names the workspaces this connection can see and flags the active one. Every other tool reads the active workspace, so check it before reporting numbers to a user who has more than one.
