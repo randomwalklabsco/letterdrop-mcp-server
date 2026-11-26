@@ -364,6 +364,7 @@ export class LetterboxClient {
     };
     decisionMakers?: KnowledgeBaseBuyerFilterGroup;
     individualContributors?: KnowledgeBaseBuyerFilterGroup;
+    fullBuyingCommittee?: KnowledgeBaseBuyerFilterGroup;
     activeIndividualFilterTab?: "aboveTheLine" | "belowTheLine";
   }): Promise<KnowledgeBaseBuyerFiltersResponse> {
     try {
@@ -378,6 +379,9 @@ export class LetterboxClient {
           : {}),
         ...(params.individualContributors
           ? { individualContributors: params.individualContributors }
+          : {}),
+        ...(params.fullBuyingCommittee
+          ? { fullBuyingCommittee: params.fullBuyingCommittee }
           : {}),
         ...(params.activeIndividualFilterTab
           ? { activeIndividualFilterTab: params.activeIndividualFilterTab }

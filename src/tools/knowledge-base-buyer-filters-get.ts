@@ -21,7 +21,8 @@ export async function handleGetKnowledgeBaseBuyerFilters(
         activeTab: data.activeIndividualFilterTab,
         companyFilters: data.companyFilters,
         decisionMakers: data.decisionMakers,
-        individualContributors: data.individualContributors
+        individualContributors: data.individualContributors,
+        fullBuyingCommittee: data.fullBuyingCommittee
       },
       null,
       2
@@ -39,7 +40,7 @@ export async function handleGetKnowledgeBaseBuyerFilters(
 export const getKnowledgeBaseBuyerFiltersTool = {
   name: "get_knowledge_base_buyer_filters",
   description:
-    "Fetch the current knowledge-base buyer filters for decision makers and individual contributors.",
+    "Fetch the current knowledge-base buyer filters: company size, industries and HQ locations, plus the keywords in job title, excluded keywords, seniorities and locations for the Decision Makers, End Users (individualContributors) and Full Buying Committee tabs.",
   inputSchema: {
     type: "object",
     properties: {},
